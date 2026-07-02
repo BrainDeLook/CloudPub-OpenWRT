@@ -54,7 +54,8 @@ mipsel_mips32:mipsel
 "
 ARCHS="${ARCHS:-$DEFAULT_ARCHS}"
 
-log()  { printf '\033[1;32m>>> %s\033[0m\n' "$*"; }
+# both go to stderr: stdout of helper functions is captured by callers
+log()  { printf '\033[1;32m>>> %s\033[0m\n' "$*" >&2; }
 warn() { printf '\033[1;33m!!! %s\033[0m\n' "$*" >&2; }
 
 mkdir -p "$BIN" "$DL"
