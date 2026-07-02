@@ -1,0 +1,14 @@
+{
+	"admin/services/cloudpub": {
+		"title": "CloudPub",
+		"order": 90,
+		"action": {
+			"type": "view",
+			"path": "cloudpub/overview"
+		},
+		"depends": {
+			"acl": [ "luci-app-cloudpub" ],
+			"uci": { "cloudpub": true }
+		}
+	}
+}

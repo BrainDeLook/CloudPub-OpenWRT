@@ -1,0 +1,47 @@
+name: Build ipk packages
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      clo_version:
+        description: 'CloudPub client version'
+        required: false
+        default: '3.1.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build po2lmo (LuCI translation compiler)
+        run: |
+          git clone --depth=1 https://github.com/openwrt/luci /tmp/luci || exit 0
+          src=$(find /tmp/luci -name 'po2lmo.c' -path '*src*' | head -n1) || true
+          if [ -n "$src" ]; then
+            dir=$(dirname "$src")
+            ( cd "$dir" && make po2lmo 2>/dev/null || cc -o po2lmo po2lmo.c template_lmo.c ) || true
+            [ -x "$dir/po2lmo" ] && sudo install -m 0755 "$dir/po2lmo" /usr/local/bin/po2lmo
+          fi
+          command -v po2lmo && echo "po2lmo ready" || echo "po2lmo unavailable, translations will be skipped"
+
+      - name: Build packages
+        env:
+          CLO_VERSION: ${{ github.event.inputs.clo_version || '3.1.0' }}
+        run: ./build.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudpub-openwrt-ipk
+          path: bin/*.ipk
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bin/*.ipk
+          generate_release_notes: true

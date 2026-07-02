@@ -1,0 +1,119 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "CloudPub"
+msgstr ""
+
+msgid "CloudPub client publishes local services to the Internet through a secure tunnel."
+msgstr ""
+
+msgid "Get your API token in the personal dashboard:"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Service status"
+msgstr ""
+
+msgid "Collecting data ..."
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Not running"
+msgstr ""
+
+msgid "Enable"
+msgstr ""
+
+msgid "API token"
+msgstr ""
+
+msgid "Personal API token from the CloudPub dashboard."
+msgstr ""
+
+msgid "Log level"
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Warning"
+msgstr ""
+
+msgid "Info"
+msgstr ""
+
+msgid "Debug"
+msgstr ""
+
+msgid "Skip TLS verification"
+msgstr ""
+
+msgid "Do not verify the server TLS certificate. Only needed for self-hosted servers with a self-signed certificate."
+msgstr ""
+
+msgid "Restart service"
+msgstr ""
+
+msgid "Apply the token and re-register all publications."
+msgstr ""
+
+msgid "CloudPub service restarted."
+msgstr ""
+
+msgid "Publications"
+msgstr ""
+
+msgid "Local services that will be published to the Internet. After saving, the service is restarted and the publications are registered automatically."
+msgstr ""
+
+msgid "Enabled"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "optional"
+msgstr ""
+
+msgid "Protocol"
+msgstr ""
+
+msgid "Local address"
+msgstr ""
+
+msgid "Port (8080), host and port (192.168.1.10:8080) or path, depending on the protocol."
+msgstr ""
+
+msgid "Authentication"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Basic Auth"
+msgstr ""
+
+msgid "Form Auth"
+msgstr ""
+
+msgid "Access rules (ACL)"
+msgstr ""
+
+msgid "Access rules in the form email:role. Roles: admin, reader, writer."
+msgstr ""
+
+msgid "Extra HTTP headers"
+msgstr ""
+
+msgid "Headers added to requests sent to the local server, in the form Name:Value."
+msgstr ""
+
+msgid "Active publications"
+msgstr ""
+
+msgid "No data (service is not running or no publications are registered)."
+msgstr ""

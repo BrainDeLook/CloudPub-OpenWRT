@@ -1,0 +1,19 @@
+{
+	"luci-app-cloudpub": {
+		"description": "Grant access to LuCI app cloudpub",
+		"read": {
+			"ubus": {
+				"service": [ "list" ],
+				"file": [ "exec" ]
+			},
+			"file": {
+				"/usr/bin/clo": [ "exec" ],
+				"/etc/init.d/cloudpub": [ "exec" ]
+			},
+			"uci": [ "cloudpub" ]
+		},
+		"write": {
+			"uci": [ "cloudpub" ]
+		}
+	}
+}
