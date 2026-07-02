@@ -2,7 +2,7 @@ name: Build ipk packages
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'claude/**' ]
     tags: [ 'v*' ]
   workflow_dispatch:
     inputs:

@@ -207,6 +207,7 @@ build_luci_ipk() {
 # --- main ---------------------------------------------------------------
 
 declare -A CLO_BINS  # clo_arch -> extracted binary path
+BUILT=0
 
 for pair in $ARCHS; do
 	owrt_arch="${pair%%:*}"
@@ -237,7 +238,13 @@ for pair in $ARCHS; do
 
 	[ "${CLO_BINS[$clo_arch]}" = "MISSING" ] && continue
 	build_cloudpub_ipk "$owrt_arch" "${CLO_BINS[$clo_arch]}"
+	BUILT=$((BUILT + 1))
 done
+
+if [ "$BUILT" -eq 0 ]; then
+	warn "no cloudpub packages were built (all downloads failed?)"
+	exit 1
+fi
 
 build_luci_ipk
 
