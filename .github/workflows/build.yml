@@ -46,8 +46,8 @@ jobs:
             mkdir -p /tmp/fakebin
             printf "%s\n" "#!/bin/sh" "[ \"\$1\" = add ]" "[ -s \"\$3\" ]" "[ -s \"\$4\" ]" > /tmp/fakebin/apk
             chmod +x /tmp/fakebin/apk
-            PATH="/tmp/fakebin:\$PATH" sh -n ./install.sh
-            PATH="/tmp/fakebin:\$PATH" sh ./install.sh
+            PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" sh -n ./install.sh
+            PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" sh ./install.sh
           '
 
       - name: Checksums
