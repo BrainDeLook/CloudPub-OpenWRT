@@ -36,6 +36,7 @@ jobs:
             fi
             CLO_VERSION="${{ github.event.inputs.clo_version || '3.2.2' }}" ./build.sh
           '
+          sudo chown -R "$USER":"$(id -gn)" bin
 
       - name: Checksums
         run: cd bin && sha256sum *.ipk *.apk > SHA256SUMS
