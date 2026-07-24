@@ -38,6 +38,18 @@ jobs:
           '
           sudo chown -R "$USER":"$(id -gn)" bin
 
+      - name: Test installer on OpenWrt 25.12 aarch64_generic
+        run: |
+          docker run --rm -v "$PWD:/work:ro" -w /work alpine:edge sh -ec '
+            apk add --no-cache ca-certificates
+            printf "%s\n" "DISTRIB_RELEASE='''25.12.5'''" "DISTRIB_ARCH='''aarch64_generic'''" > /etc/openwrt_release
+            mkdir -p /tmp/fakebin
+            printf "%s\n" "#!/bin/sh" "[ \"\$1\" = add ]" "[ -s \"\$3\" ]" "[ -s \"\$4\" ]" > /tmp/fakebin/apk
+            chmod +x /tmp/fakebin/apk
+            PATH="/tmp/fakebin:\$PATH" sh -n ./install.sh
+            PATH="/tmp/fakebin:\$PATH" sh ./install.sh
+          '
+
       - name: Checksums
         run: cd bin && sha256sum *.ipk *.apk > SHA256SUMS
 
