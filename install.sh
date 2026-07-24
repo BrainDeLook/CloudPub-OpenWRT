@@ -8,28 +8,28 @@ trap 'rm -rf "$TMP"' EXIT INT TERM
 mkdir -p "$TMP"
 
 say() { printf '%s\n' "$*"; }
-die() { printf 'РћС€РёР±РєР°: %s\n' "$*" >&2; exit 1; }
+die() { printf 'Ошибка: %s\n' "$*" >&2; exit 1; }
 fetch() {
 	if command -v uclient-fetch >/dev/null 2>&1; then uclient-fetch -q -O "$2" "$1"
 	elif command -v wget >/dev/null 2>&1; then wget -q -O "$2" "$1"
 	elif command -v curl >/dev/null 2>&1; then curl -fsSL "$1" -o "$2"
-	else die "РЅСѓР¶РµРЅ uclient-fetch, wget РёР»Рё curl"; fi
+	else die "нужен uclient-fetch, wget или curl"; fi
 }
 
-[ -r /etc/openwrt_release ] || die "СЃРєСЂРёРїС‚ РїСЂРµРґРЅР°Р·РЅР°С‡РµРЅ РґР»СЏ OpenWrt"
+[ -r /etc/openwrt_release ] || die "скрипт предназначен для OpenWrt"
 . /etc/openwrt_release
 ARCH="${DISTRIB_ARCH:-}"
-[ -n "$ARCH" ] || die "РЅРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ Р°СЂС…РёС‚РµРєС‚СѓСЂСѓ"
+[ -n "$ARCH" ] || die "не удалось определить архитектуру"
 
 if command -v apk >/dev/null 2>&1; then
 	PM=apk; EXT=apk
 elif command -v opkg >/dev/null 2>&1; then
 	PM=opkg; EXT=ipk
 else
-	die "РЅРµ РЅР°Р№РґРµРЅ РїР°РєРµС‚РЅС‹Р№ РјРµРЅРµРґР¶РµСЂ apk РёР»Рё opkg"
+	die "не найден пакетный менеджер apk или opkg"
 fi
 
-say "CloudPub: OpenWrt ${DISTRIB_RELEASE:-unknown}, $ARCH, РїР°РєРµС‚ .$EXT"
+say "CloudPub: OpenWrt ${DISTRIB_RELEASE:-unknown}, $ARCH, пакет .$EXT"
 fetch "$API" "$TMP/release.json"
 
 asset_url() {
@@ -47,8 +47,8 @@ fi
 
 CLIENT_URL="$(asset_url "$CLIENT_PATTERN")"
 LUCI_URL="$(asset_url "$LUCI_PATTERN")"
-[ -n "$CLIENT_URL" ] || die "РІ РїРѕСЃР»РµРґРЅРµРј СЂРµР»РёР·Рµ РЅРµС‚ РїР°РєРµС‚Р° РґР»СЏ $ARCH"
-[ -n "$LUCI_URL" ] || die "РІ РїРѕСЃР»РµРґРЅРµРј СЂРµР»РёР·Рµ РЅРµС‚ РїР°РєРµС‚Р° LuCI"
+[ -n "$CLIENT_URL" ] || die "в последнем релизе нет пакета для $ARCH"
+[ -n "$LUCI_URL" ] || die "в последнем релизе нет пакета LuCI"
 fetch "$CLIENT_URL" "$TMP/cloudpub.$EXT"
 fetch "$LUCI_URL" "$TMP/luci-app-cloudpub.$EXT"
 
@@ -58,5 +58,5 @@ else
 	opkg install "$TMP/cloudpub.ipk" "$TMP/luci-app-cloudpub.ipk"
 fi
 
-say "Р“РѕС‚РѕРІРѕ. РћС‚РєСЂРѕР№С‚Рµ LuCI в†’ РЎР»СѓР¶Р±С‹ в†’ CloudPub РёР»Рё РЅР°СЃС‚СЂРѕР№С‚Рµ /etc/config/cloudpub."
+say "Готово. Откройте LuCI → Службы → CloudPub или настройте /etc/config/cloudpub."
 
