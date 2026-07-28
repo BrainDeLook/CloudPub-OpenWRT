@@ -43,6 +43,28 @@ function renderStatus(isRunning) {
 	return '<em><span style="color:#d73a49"><strong>' + _('Not running') + '</strong></span></em>';
 }
 
+function parseUpdateState(output) {
+	var state = {};
+	String(output || '').trim().split(/\n/).forEach(function(line) {
+		var pos = line.indexOf('=');
+		if (pos > 0)
+			state[line.substring(0, pos)] = line.substring(pos + 1);
+	});
+	return state;
+}
+
+function callUpdater(action) {
+	return fs.exec('/usr/libexec/cloudpub-update', [ action ]).then(function(res) {
+		var output = [ res.stdout, res.stderr ].filter(Boolean).join('\n').trim();
+		if (res.code !== 0)
+			throw new Error(output || _('Update check failed.'));
+		return {
+			state: parseUpdateState(res.stdout),
+			output: output
+		};
+	});
+}
+
 return view.extend({
 	render: function() {
 		var m, s, o;
@@ -85,35 +107,6 @@ return view.extend({
 			return fs.exec('/etc/init.d/cloudpub', [ 'restart' ]).then(function() {
 				ui.addNotification(null, E('p', _('CloudPub service restarted.')), 'info');
 			}).catch(function(e) {
-				ui.addNotification(null, E('p', e.message), 'error');
-			});
-		};
-
-		o = s.option(form.Button, '_update', _('Update add-on'),
-			_('Download and install the latest CloudPub client and LuCI add-on from GitHub Releases.'));
-		o.inputstyle = 'positive';
-		o.onclick = function() {
-			if (!window.confirm(_('Update CloudPub now? The service will be restarted.')))
-				return Promise.resolve();
-
-			ui.showModal(_('Updating CloudPub'), [
-				E('p', { 'class': 'spinning' }, _('Downloading and installing the latest release ...'))
-			]);
-
-			return fs.exec('/usr/libexec/cloudpub-update', []).then(function(res) {
-				var output = [ res.stdout, res.stderr ].filter(Boolean).join('\n').trim();
-
-				ui.hideModal();
-				if (res.code !== 0)
-					throw new Error(output || _('Update failed.'));
-
-				ui.addNotification(null, E('div', {}, [
-					E('p', {}, _('CloudPub was updated successfully. The page will reload.')),
-					output ? E('pre', { 'style': 'white-space:pre-wrap' }, [ output ]) : ''
-				]), 'info');
-				window.setTimeout(function() { window.location.reload(); }, 3000);
-			}).catch(function(e) {
-				ui.hideModal();
 				ui.addNotification(null, E('p', e.message), 'error');
 			});
 		};
@@ -168,8 +161,85 @@ return view.extend({
 		o.depends('proto', 'https');
 
 		return m.render().then(function(mapEl) {
+			var updateStatus = E('p', { 'id': 'cloudpub-update-status' }, [
+				_('Update status has not been checked yet.')
+			]);
+			var updateButton = E('button', {
+				'class': 'cbi-button cbi-button-positive',
+				'style': 'display:none',
+				'click': function(ev) {
+					ev.preventDefault();
+					if (!window.confirm(_('Update CloudPub now? The service will be restarted.')))
+						return;
+
+					ui.showModal(_('Updating CloudPub'), [
+						E('p', { 'class': 'spinning' }, _('Downloading and installing the latest release ...'))
+					]);
+
+					callUpdater('update').then(function(result) {
+						ui.hideModal();
+						ui.addNotification(null, E('div', {}, [
+							E('p', {}, _('CloudPub was updated successfully. The page will reload.')),
+							result.output ? E('pre', { 'style': 'white-space:pre-wrap' }, [ result.output ]) : ''
+						]), 'info');
+						window.setTimeout(function() { window.location.reload(); }, 3000);
+					}).catch(function(e) {
+						ui.hideModal();
+						ui.addNotification(null, E('p', e.message), 'error');
+					});
+				}
+			}, [ _('Update add-on') ]);
+			var checkButton = E('button', {
+				'class': 'cbi-button cbi-button-action',
+				'click': function(ev) {
+					ev.preventDefault();
+					checkButton.disabled = true;
+					checkButton.classList.add('spinning');
+					callUpdater('check').then(function(result) {
+						renderUpdateState(result.state);
+						checkButton.disabled = false;
+						checkButton.classList.remove('spinning');
+					}).catch(function(e) {
+						checkButton.disabled = false;
+						checkButton.classList.remove('spinning');
+						ui.addNotification(null, E('p', e.message), 'error');
+					});
+				}
+			}, [ _('Check for updates') ]);
+
+			function renderUpdateState(state) {
+				var current = state.current || _('unknown');
+				var latest = state.latest || current;
+				var checked = Number(state.checked || 0);
+
+				if (state.available === '1') {
+					updateStatus.textContent = _('Update available: %s → %s').format(current, latest);
+					updateStatus.style.color = '#d97706';
+					updateButton.style.display = '';
+				}
+				else {
+					updateStatus.textContent = _('The latest add-on version is installed: %s').format(current);
+					updateStatus.style.color = '#2ea44f';
+					updateButton.style.display = 'none';
+				}
+
+				if (checked > 0)
+					updateStatus.textContent += ' · ' + _('Last checked: %s').format(new Date(checked * 1000).toLocaleString());
+			}
+
+			function refreshUpdateState() {
+				return callUpdater('status').then(function(result) {
+					renderUpdateState(result.state);
+				});
+			}
+
+			refreshUpdateState().catch(function(e) {
+				updateStatus.textContent = e.message;
+				updateStatus.style.color = '#d73a49';
+			});
+
 			poll.add(function() {
-				return Promise.all([ getServiceStatus(), getPublicationList() ]).then(function(data) {
+				return Promise.all([ getServiceStatus(), getPublicationList(), refreshUpdateState() ]).then(function(data) {
 					var st = document.getElementById('cloudpub-status');
 					if (st)
 						st.innerHTML = renderStatus(data[0]);
@@ -182,6 +252,16 @@ return view.extend({
 
 			return E('div', {}, [
 				mapEl,
+				E('div', { 'class': 'cbi-section' }, [
+					E('h3', {}, _('Add-on updates')),
+					E('p', {}, _('Updates are checked automatically every 24 hours.')),
+					updateStatus,
+					E('div', { 'class': 'cbi-section-node' }, [
+						checkButton,
+						' ',
+						updateButton
+					])
+				]),
 				E('div', { 'class': 'cbi-section' }, [
 					E('h3', {}, _('Active publications')),
 					E('pre', {

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+while :; do
+	if /usr/libexec/cloudpub-update check >/dev/null 2>&1; then
+		sleep 86400
+	else
+		sleep 3600
+	fi
+done

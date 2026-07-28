@@ -1,10 +1,11 @@
 #!/bin/sh
 set -eu
 
-INSTALL_URL="https://github.com/BrainDeLook/CloudPub-OpenWRT/releases/latest/download/install.sh"
-TMP="/tmp/cloudpub-update.$$"
-trap 'rm -rf "$TMP"' EXIT INT TERM
-mkdir -p "$TMP"
+REPO="BrainDeLook/CloudPub-OpenWRT"
+LATEST_URL="${LATEST_URL:-https://github.com/$REPO/releases/latest/download}"
+LOCAL_RELEASE="${LOCAL_RELEASE:-/usr/share/cloudpub-openwrt/release}"
+STATE="${STATE:-/tmp/cloudpub-update-status}"
+ACTION="${1:-update}"
 
 fetch() {
 	if command -v uclient-fetch >/dev/null 2>&1; then
@@ -19,11 +20,75 @@ fetch() {
 	fi
 }
 
-echo "Checking the latest CloudPub release..."
-fetch "$INSTALL_URL" "$TMP/install.sh"
-[ -s "$TMP/install.sh" ] || {
-	echo "Downloaded installer is empty." >&2
-	exit 1
+current_release() {
+	tr -d '\r\n ' < "$LOCAL_RELEASE" 2>/dev/null || printf 'unknown'
 }
-sh -n "$TMP/install.sh"
-sh "$TMP/install.sh"
+
+write_state() {
+	local current="$1" latest="$2" available="$3" checked="$4"
+	umask 077
+	{
+		printf 'current=%s\n' "$current"
+		printf 'latest=%s\n' "$latest"
+		printf 'available=%s\n' "$available"
+		printf 'checked=%s\n' "$checked"
+	} > "$STATE.tmp"
+	mv "$STATE.tmp" "$STATE"
+}
+
+status() {
+	if [ -s "$STATE" ]; then
+		cat "$STATE"
+	else
+		local current
+		current="$(current_release)"
+		write_state "$current" "$current" 0 0
+		cat "$STATE"
+	fi
+}
+
+check_update() {
+	local tmp="/tmp/cloudpub-update-release.$$" current latest available
+	trap "rm -f '$tmp'" EXIT INT TERM
+	current="$(current_release)"
+	fetch "$LATEST_URL/release" "$tmp" || {
+		echo "Unable to check the latest CloudPub add-on release." >&2
+		return 1
+	}
+	latest="$(tr -d '\r\n ' < "$tmp")"
+	case "$latest" in
+		''|*[!A-Za-z0-9._-]*)
+			echo "The release server returned an invalid version." >&2
+			return 1
+			;;
+	esac
+	available=0
+	[ "$latest" = "$current" ] || available=1
+	write_state "$current" "$latest" "$available" "$(date +%s)"
+	status
+}
+
+install_update() {
+	local tmp="/tmp/cloudpub-update.$$"
+	trap "rm -rf '$tmp'" EXIT INT TERM
+	mkdir -p "$tmp"
+
+	echo "Downloading the latest CloudPub OpenWrt installer..."
+	fetch "$LATEST_URL/install.sh" "$tmp/install.sh"
+	[ -s "$tmp/install.sh" ] || {
+		echo "Downloaded installer is empty." >&2
+		exit 1
+	}
+	sh -n "$tmp/install.sh"
+	sh "$tmp/install.sh"
+}
+
+case "$ACTION" in
+	status) status ;;
+	check) check_update ;;
+	update) install_update ;;
+	*)
+		echo "Usage: $0 {status|check|update}" >&2
+		exit 2
+		;;
+esac

@@ -2,8 +2,8 @@
 set -euo pipefail
 
 CLO_VERSION="${CLO_VERSION:-3.3.0}"
-PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.1.0}"
+PKG_RELEASE="${PKG_RELEASE:-2}"
+LUCI_VERSION="${LUCI_VERSION:-1.2.0}"
 FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"
 MAINTAINER="CloudPub-OpenWRT"
@@ -43,7 +43,7 @@ log() { printf '\033[1;32m>>> %s\033[0m\n' "$*" >&2; }
 warn() { printf '\033[1;33m!!! %s\033[0m\n' "$*" >&2; }
 want_format() { case " $FORMATS " in *" $1 "*) return 0;; *) return 1;; esac; }
 mkdir -p "$BIN" "$DL"
-rm -f "$BIN"/*.ipk "$BIN"/*.apk
+rm -f "$BIN"/*.ipk "$BIN"/*.apk "$BIN/release"
 
 pack_ipk() {
 	local stage="$1" out="$2"
@@ -152,11 +152,26 @@ prepare_luci() {
 	EOF
 	cat > "$stage/control/postinst" <<-'EOF'
 		#!/bin/sh
-		[ -n "${IPKG_INSTROOT:-}" ] || { rm -f /tmp/luci-indexcache*; rm -rf /tmp/luci-modulecache/; /etc/init.d/rpcd reload 2>/dev/null; }
+		[ -n "${IPKG_INSTROOT:-}" ] || {
+			rm -f /tmp/luci-indexcache*
+			rm -rf /tmp/luci-modulecache/
+			/etc/init.d/cloudpub-update-check enable
+			/etc/init.d/cloudpub-update-check restart
+			/etc/init.d/rpcd reload 2>/dev/null
+		}
 		exit 0
 	EOF
-	chmod 0755 "$stage/control/postinst"
+	cat > "$stage/control/prerm" <<-'EOF'
+		#!/bin/sh
+		[ -n "${IPKG_INSTROOT:-}" ] || {
+			/etc/init.d/cloudpub-update-check stop 2>/dev/null
+			/etc/init.d/cloudpub-update-check disable 2>/dev/null
+		}
+		exit 0
+	EOF
+	chmod 0755 "$stage/control/postinst" "$stage/control/prerm"
 	cp "$stage/control/postinst" "$stage/post-install"
+	cp "$stage/control/prerm" "$stage/pre-deinstall"
 	echo "$stage"
 }
 
@@ -183,6 +198,7 @@ done
 stage="$(prepare_luci)"
 want_format ipk && pack_ipk "$stage" "$BIN/luci-app-cloudpub_${LUCI_VERSION}-${PKG_RELEASE}_all.ipk"
 want_format apk && pack_apk "$stage" "$BIN/luci-app-cloudpub-${LUCI_VERSION}-r${PKG_RELEASE}.apk" luci-app-cloudpub "$LUCI_VERSION" noarch "LuCI support for CloudPub" "cloudpub luci-base"
+cp "$ROOT/luci-app-cloudpub/root/usr/share/cloudpub-openwrt/release" "$BIN/release"
 log "done, packages are in $BIN"
 ls -la "$BIN"
 

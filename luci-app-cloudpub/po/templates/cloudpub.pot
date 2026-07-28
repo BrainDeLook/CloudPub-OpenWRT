@@ -67,6 +67,33 @@ msgstr ""
 msgid "Update add-on"
 msgstr ""
 
+msgid "Check for updates"
+msgstr ""
+
+msgid "Add-on updates"
+msgstr ""
+
+msgid "Updates are checked automatically every 24 hours."
+msgstr ""
+
+msgid "Update status has not been checked yet."
+msgstr ""
+
+msgid "Update available: %s → %s"
+msgstr ""
+
+msgid "The latest add-on version is installed: %s"
+msgstr ""
+
+msgid "Last checked: %s"
+msgstr ""
+
+msgid "unknown"
+msgstr ""
+
+msgid "Update check failed."
+msgstr ""
+
 msgid "Download and install the latest CloudPub client and LuCI add-on from GitHub Releases."
 msgstr ""
 

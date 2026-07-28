@@ -71,6 +71,33 @@ msgstr "Служба CloudPub перезапущена."
 msgid "Update add-on"
 msgstr "Обновить аддон"
 
+msgid "Check for updates"
+msgstr "Проверить обновления"
+
+msgid "Add-on updates"
+msgstr "Обновления аддона"
+
+msgid "Updates are checked automatically every 24 hours."
+msgstr "Наличие обновлений проверяется автоматически каждые 24 часа."
+
+msgid "Update status has not been checked yet."
+msgstr "Наличие обновлений ещё не проверялось."
+
+msgid "Update available: %s → %s"
+msgstr "Доступно обновление: %s → %s"
+
+msgid "The latest add-on version is installed: %s"
+msgstr "Установлена последняя версия аддона: %s"
+
+msgid "Last checked: %s"
+msgstr "Последняя проверка: %s"
+
+msgid "unknown"
+msgstr "неизвестно"
+
+msgid "Update check failed."
+msgstr "Не удалось проверить наличие обновлений."
+
 msgid "Download and install the latest CloudPub client and LuCI add-on from GitHub Releases."
 msgstr "Скачать и установить последние версии клиента CloudPub и LuCI-аддона из GitHub Releases."
 
