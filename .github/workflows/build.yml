@@ -41,12 +41,12 @@ jobs:
       - name: Test installer on OpenWrt 25.12 aarch64_generic
         run: |
           docker run --rm -v "$PWD:/work:ro" -w /work alpine:edge sh -ec '
-            apk add --no-cache ca-certificates
+            apk add --no-cache ca-certificates busybox-extras
             printf "%s\n" "DISTRIB_RELEASE='''25.12.5'''" "DISTRIB_ARCH='''aarch64_generic'''" > /etc/openwrt_release
             mkdir -p /tmp/fakebin
             printf "%s\n" "#!/bin/sh" "[ \"\$1\" = add ]" "[ -s \"\$3\" ]" "[ -s \"\$4\" ]" > /tmp/fakebin/apk
             chmod +x /tmp/fakebin/apk
-            busybox httpd -p 127.0.0.1:8080 -h /work/bin
+            httpd -p 127.0.0.1:8080 -h /work/bin
             PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" sh -n ./install.sh
             sh -n ./luci-app-cloudpub/root/usr/libexec/cloudpub-update
             test -x ./luci-app-cloudpub/root/usr/libexec/cloudpub-update
