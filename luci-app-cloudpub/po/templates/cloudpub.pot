@@ -64,6 +64,27 @@ msgstr ""
 msgid "CloudPub service restarted."
 msgstr ""
 
+msgid "Update add-on"
+msgstr ""
+
+msgid "Download and install the latest CloudPub client and LuCI add-on from GitHub Releases."
+msgstr ""
+
+msgid "Update CloudPub now? The service will be restarted."
+msgstr ""
+
+msgid "Updating CloudPub"
+msgstr ""
+
+msgid "Downloading and installing the latest release ..."
+msgstr ""
+
+msgid "Update failed."
+msgstr ""
+
+msgid "CloudPub was updated successfully. The page will reload."
+msgstr ""
+
 msgid "Publications"
 msgstr ""
 

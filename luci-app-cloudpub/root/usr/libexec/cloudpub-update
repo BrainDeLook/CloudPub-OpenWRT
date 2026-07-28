@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+INSTALL_URL="https://github.com/BrainDeLook/CloudPub-OpenWRT/releases/latest/download/install.sh"
+TMP="/tmp/cloudpub-update.$$"
+trap 'rm -rf "$TMP"' EXIT INT TERM
+mkdir -p "$TMP"
+
+fetch() {
+	if command -v uclient-fetch >/dev/null 2>&1; then
+		uclient-fetch -q -O "$2" "$1"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -q -O "$2" "$1"
+	elif command -v curl >/dev/null 2>&1; then
+		curl -fsSL "$1" -o "$2"
+	else
+		echo "No downloader found (uclient-fetch, wget or curl is required)." >&2
+		exit 1
+	fi
+}
+
+echo "Checking the latest CloudPub release..."
+fetch "$INSTALL_URL" "$TMP/install.sh"
+[ -s "$TMP/install.sh" ] || {
+	echo "Downloaded installer is empty." >&2
+	exit 1
+}
+sh -n "$TMP/install.sh"
+sh "$TMP/install.sh"

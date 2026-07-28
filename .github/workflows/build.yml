@@ -9,7 +9,7 @@ on:
       clo_version:
         description: CloudPub client version
         required: false
-        default: '3.2.2'
+        default: '3.3.0'
 
 permissions:
   contents: write
@@ -23,9 +23,9 @@ jobs:
 
       - name: Build IPK and APK packages
         env:
-          CLO_VERSION: ${{ github.event.inputs.clo_version || '3.2.2' }}
+          CLO_VERSION: ${{ github.event.inputs.clo_version || '3.3.0' }}
         run: |
-          docker run --rm -v "$PWD:/work" -w /work alpine:edge sh -ec '
+          docker run --rm -e CLO_VERSION="$CLO_VERSION" -v "$PWD:/work" -w /work alpine:edge sh -ec '
             apk add --no-cache bash curl tar file gettext git build-base lua5.1-dev
             git clone --depth=1 https://github.com/openwrt/luci /tmp/luci
             src=$(find /tmp/luci -name po2lmo.c -path "*src*" | head -n1)
@@ -34,7 +34,7 @@ jobs:
               (cd "$dir" && make po2lmo) || true
               [ ! -x "$dir/po2lmo" ] || install -m 0755 "$dir/po2lmo" /usr/local/bin/po2lmo
             fi
-            CLO_VERSION="${{ github.event.inputs.clo_version || '3.2.2' }}" ./build.sh
+            ./build.sh
           '
           sudo chown -R "$USER":"$(id -gn)" bin
 
@@ -46,8 +46,13 @@ jobs:
             mkdir -p /tmp/fakebin
             printf "%s\n" "#!/bin/sh" "[ \"\$1\" = add ]" "[ -s \"\$3\" ]" "[ -s \"\$4\" ]" > /tmp/fakebin/apk
             chmod +x /tmp/fakebin/apk
+            busybox httpd -p 127.0.0.1:8080 -h /work/bin
             PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" sh -n ./install.sh
-            PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" sh ./install.sh
+            sh -n ./luci-app-cloudpub/root/usr/libexec/cloudpub-update
+            test -x ./luci-app-cloudpub/root/usr/libexec/cloudpub-update
+            PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+              BASE_URL="http://127.0.0.1:8080" VERSION="${{ github.event.inputs.clo_version || '3.3.0' }}" \
+              sh ./install.sh
           '
 
       - name: Checksums
@@ -67,14 +72,15 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.clo_version || '3.2.2' }}
-          name: CloudPub 3.2.2 for OpenWrt
+          tag_name: v${{ github.event.inputs.clo_version || '3.3.0' }}
+          name: CloudPub ${{ github.event.inputs.clo_version || '3.3.0' }} for OpenWrt
           body: |
-            CloudPub client 3.2.2 for OpenWrt.
+            CloudPub client ${{ github.event.inputs.clo_version || '3.3.0' }} for OpenWrt.
 
             - IPK packages for OpenWrt 24.10 and older
             - APK packages for OpenWrt 25.12 and newer
             - Automatic installer for package-manager and architecture detection
+            - One-click add-on updates from the CloudPub LuCI page
 
             Quick install:
             `wget -qO- https://github.com/BrainDeLook/CloudPub-OpenWRT/releases/latest/download/install.sh | sh`

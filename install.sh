@@ -1,11 +1,11 @@
 #!/bin/sh
 set -eu
 
-REPO="BrainDeLook/CloudPub-OpenWRT"
-VERSION="3.2.2"
-PKG_RELEASE="1"
-LUCI_VERSION="1.0.0"
-BASE_URL="https://github.com/$REPO/releases/download/v$VERSION"
+REPO="${REPO:-BrainDeLook/CloudPub-OpenWRT}"
+VERSION="${VERSION:-3.3.0}"
+PKG_RELEASE="${PKG_RELEASE:-1}"
+LUCI_VERSION="${LUCI_VERSION:-1.1.0}"
+BASE_URL="${BASE_URL:-https://github.com/$REPO/releases/download/v$VERSION}"
 TMP="/tmp/cloudpub-install.$$"
 trap 'rm -rf "$TMP"' EXIT INT TERM
 mkdir -p "$TMP"

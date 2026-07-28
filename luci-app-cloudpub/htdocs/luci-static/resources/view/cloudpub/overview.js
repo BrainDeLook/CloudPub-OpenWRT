@@ -89,6 +89,35 @@ return view.extend({
 			});
 		};
 
+		o = s.option(form.Button, '_update', _('Update add-on'),
+			_('Download and install the latest CloudPub client and LuCI add-on from GitHub Releases.'));
+		o.inputstyle = 'positive';
+		o.onclick = function() {
+			if (!window.confirm(_('Update CloudPub now? The service will be restarted.')))
+				return Promise.resolve();
+
+			ui.showModal(_('Updating CloudPub'), [
+				E('p', { 'class': 'spinning' }, _('Downloading and installing the latest release ...'))
+			]);
+
+			return fs.exec('/usr/libexec/cloudpub-update', []).then(function(res) {
+				var output = [ res.stdout, res.stderr ].filter(Boolean).join('\n').trim();
+
+				ui.hideModal();
+				if (res.code !== 0)
+					throw new Error(output || _('Update failed.'));
+
+				ui.addNotification(null, E('div', {}, [
+					E('p', {}, _('CloudPub was updated successfully. The page will reload.')),
+					output ? E('pre', { 'style': 'white-space:pre-wrap' }, [ output ]) : ''
+				]), 'info');
+				window.setTimeout(function() { window.location.reload(); }, 3000);
+			}).catch(function(e) {
+				ui.hideModal();
+				ui.addNotification(null, E('p', e.message), 'error');
+			});
+		};
+
 		s = m.section(form.GridSection, 'publish', _('Publications'),
 			_('Local services that will be published to the Internet. After saving, the service is restarted and the publications are registered automatically.'));
 		s.addremove = true;

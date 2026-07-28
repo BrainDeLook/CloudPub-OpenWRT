@@ -68,6 +68,27 @@ msgstr "Применить токен и заново зарегистриров
 msgid "CloudPub service restarted."
 msgstr "Служба CloudPub перезапущена."
 
+msgid "Update add-on"
+msgstr "Обновить аддон"
+
+msgid "Download and install the latest CloudPub client and LuCI add-on from GitHub Releases."
+msgstr "Скачать и установить последние версии клиента CloudPub и LuCI-аддона из GitHub Releases."
+
+msgid "Update CloudPub now? The service will be restarted."
+msgstr "Обновить CloudPub сейчас? Служба будет перезапущена."
+
+msgid "Updating CloudPub"
+msgstr "Обновление CloudPub"
+
+msgid "Downloading and installing the latest release ..."
+msgstr "Скачивание и установка последнего релиза ..."
+
+msgid "Update failed."
+msgstr "Не удалось выполнить обновление."
+
+msgid "CloudPub was updated successfully. The page will reload."
+msgstr "CloudPub успешно обновлён. Страница будет перезагружена."
+
 msgid "Publications"
 msgstr "Публикации"
 

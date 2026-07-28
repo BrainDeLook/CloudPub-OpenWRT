@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLO_VERSION="${CLO_VERSION:-3.2.2}"
+CLO_VERSION="${CLO_VERSION:-3.3.0}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.0.0}"
+LUCI_VERSION="${LUCI_VERSION:-1.1.0}"
 FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"
 MAINTAINER="CloudPub-OpenWRT"
