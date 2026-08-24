@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-cloudpub
 PKG_VERSION:=1.2.0
-PKG_RELEASE:=3
+PKG_RELEASE:=1
 
 PKG_MAINTAINER:=CloudPub-OpenWRT
 PKG_LICENSE:=Apache-2.0
