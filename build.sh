@@ -198,7 +198,7 @@ done
 stage="$(prepare_luci)"
 want_format ipk && pack_ipk "$stage" "$BIN/luci-app-cloudpub_${LUCI_VERSION}-${PKG_RELEASE}_all.ipk"
 want_format apk && pack_apk "$stage" "$BIN/luci-app-cloudpub-${LUCI_VERSION}-r${PKG_RELEASE}.apk" luci-app-cloudpub "$LUCI_VERSION" noarch "LuCI support for CloudPub" "cloudpub luci-base"
-printf 'v%s-r%s\n' "$CLO_VERSION" "$PKG_RELEASE" > "$BIN/release"
+printf 'v%s\n' "$CLO_VERSION" > "$BIN/release"
 log "done, packages are in $BIN"
 ls -la "$BIN"
 
