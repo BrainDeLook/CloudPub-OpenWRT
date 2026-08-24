@@ -9,7 +9,7 @@ on:
       clo_version:
         description: CloudPub client version
         required: false
-        default: '3.3.0'
+        default: '3.4.889'
 
 permissions:
   contents: write
@@ -23,7 +23,7 @@ jobs:
 
       - name: Build IPK and APK packages
         env:
-          CLO_VERSION: ${{ github.event.inputs.clo_version || '3.3.0' }}
+          CLO_VERSION: ${{ github.event.inputs.clo_version || '3.4.889' }}
         run: |
           docker run --rm -e CLO_VERSION="$CLO_VERSION" -v "$PWD:/work" -w /work alpine:edge sh -ec '
             apk add --no-cache bash curl tar file gettext git build-base lua5.1-dev
@@ -60,8 +60,8 @@ jobs:
               sh ./luci-app-cloudpub/root/usr/libexec/cloudpub-update check
             grep -q "^available=0$" /tmp/cloudpub-update-status
             PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-              BASE_URL="http://127.0.0.1:8080" VERSION="${{ github.event.inputs.clo_version || '3.3.0' }}" \
-              PKG_RELEASE=2 LUCI_VERSION=1.2.0 \
+              BASE_URL="http://127.0.0.1:8080" VERSION="${{ github.event.inputs.clo_version || '3.4.889' }}" \
+              PKG_RELEASE=3 LUCI_VERSION=1.2.0 \
               sh ./install.sh
           '
 
@@ -83,10 +83,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.3.0-r2
-          name: CloudPub ${{ github.event.inputs.clo_version || '3.3.0' }} for OpenWrt r2
+          tag_name: v3.4.889-r3
+          name: CloudPub ${{ github.event.inputs.clo_version || '3.4.889' }} for OpenWrt r3
           body: |
-            CloudPub client ${{ github.event.inputs.clo_version || '3.3.0' }} for OpenWrt.
+            CloudPub client ${{ github.event.inputs.clo_version || '3.4.889' }} for OpenWrt.
 
             - IPK packages for OpenWrt 24.10 and older
             - APK packages for OpenWrt 25.12 and newer
