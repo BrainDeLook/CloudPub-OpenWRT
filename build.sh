@@ -3,7 +3,8 @@ set -euo pipefail
 
 CLO_VERSION="${CLO_VERSION:-3.4.889}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.2.0}"
+LUCI_VERSION="${LUCI_VERSION:-1.3.0}"
+RELEASE_VERSION="${RELEASE_VERSION:-v${CLO_VERSION}-luci.1}"
 FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"
 MAINTAINER="CloudPub-OpenWRT"
@@ -198,7 +199,7 @@ done
 stage="$(prepare_luci)"
 want_format ipk && pack_ipk "$stage" "$BIN/luci-app-cloudpub_${LUCI_VERSION}-${PKG_RELEASE}_all.ipk"
 want_format apk && pack_apk "$stage" "$BIN/luci-app-cloudpub-${LUCI_VERSION}-r${PKG_RELEASE}.apk" luci-app-cloudpub "$LUCI_VERSION" noarch "LuCI support for CloudPub" "cloudpub luci-base"
-printf 'v%s\n' "$CLO_VERSION" > "$BIN/release"
+printf '%s\n' "$RELEASE_VERSION" > "$BIN/release"
 log "done, packages are in $BIN"
 ls -la "$BIN"
 

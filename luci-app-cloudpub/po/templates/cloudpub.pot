@@ -163,5 +163,8 @@ msgstr ""
 msgid "Active publications"
 msgstr ""
 
+msgid "Open publication"
+msgstr ""
+
 msgid "No data (service is not running or no publications are registered)."
 msgstr ""

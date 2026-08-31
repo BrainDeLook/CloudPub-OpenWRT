@@ -37,6 +37,34 @@ function stripAnsi(s) {
 	return String(s).replace(/\u001b\[[0-9;]*m/g, '');
 }
 
+function renderPublications(output) {
+	var text = stripAnsi(output || '').trim();
+	if (!text)
+		return [ E('em', {}, [ _('No data (service is not running or no publications are registered).') ]) ];
+
+	return text.split(/\r?\n/).map(function(line) {
+		/* Prefer the public HTTPS endpoint after the arrow; fall back to HTTP
+		 * for installations that publish without TLS. */
+		var match = line.match(/(https:\/\/[^\s]+)/i) || line.match(/(http:\/\/[^\s]+)/i);
+		if (!match)
+			return E('div', {}, [ line ]);
+
+		var before = line.substring(0, match.index);
+		var url = match[1];
+		var after = line.substring(match.index + url.length);
+		return E('div', {}, [
+			before,
+			E('a', {
+				'href': url,
+				'target': '_blank',
+				'rel': 'noreferrer noopener',
+				'title': _('Open publication')
+			}, [ url ]),
+			after
+		]);
+	});
+}
+
 function renderStatus(isRunning) {
 	if (isRunning)
 		return '<em><span style="color:#2ea44f"><strong>' + _('Running') + '</strong></span></em>';
@@ -246,7 +274,7 @@ return view.extend({
 
 					var ls = document.getElementById('cloudpub-ls');
 					if (ls)
-						ls.textContent = data[1] ? stripAnsi(data[1]).trim() : _('No data (service is not running or no publications are registered).');
+						ls.replaceChildren.apply(ls, renderPublications(data[1]));
 				});
 			}, 10);
 

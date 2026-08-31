@@ -53,7 +53,9 @@ CLO_VERSION=3.4.889 FORMATS="ipk apk" ./build.sh
 
 Для `.apk` нужен `apk-tools` с командой `apk mkpkg`; CI запускает сборку в Alpine. Артефакты и `SHA256SUMS` создаются в `bin/`.
 
-Версия OpenWrt-релиза хранится в `luci-app-cloudpub/root/usr/share/cloudpub-openwrt/release`. Этот файл публикуется вместе с пакетами и используется фоновой службой проверки обновлений.
+Версия OpenWrt-релиза хранится в `luci-app-cloudpub/root/usr/share/cloudpub-openwrt/release`. Версия клиента CloudPub и версия аддона LuCI могут отличаться; этот файл публикуется вместе с пакетами и используется фоновой службой проверки обновлений.
+
+Устройства Rockchip ARMv8 обычно используют OpenWrt-архитектуру `aarch64_generic`; установщик также принимает нестандартное имя `rockchip-armv8` и автоматически выбирает этот пакет.
 
 Каталоги `cloudpub/` и `luci-app-cloudpub/` также можно подключить как feed или скопировать в `package/` OpenWrt SDK:
 

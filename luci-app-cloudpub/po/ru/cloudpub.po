@@ -167,5 +167,8 @@ msgstr "Заголовки, добавляемые к запросам на ло
 msgid "Active publications"
 msgstr "Активные публикации"
 
+msgid "Open publication"
+msgstr "Открыть публикацию"
+
 msgid "No data (service is not running or no publications are registered)."
 msgstr "Нет данных (служба не запущена или публикации не зарегистрированы)."

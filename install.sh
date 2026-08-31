@@ -4,8 +4,8 @@ set -eu
 REPO="${REPO:-BrainDeLook/CloudPub-OpenWRT}"
 VERSION="${VERSION:-3.4.889}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.2.0}"
-RELEASE_TAG="${RELEASE_TAG:-v3.4.889}"
+LUCI_VERSION="${LUCI_VERSION:-1.3.0}"
+RELEASE_TAG="${RELEASE_TAG:-v3.4.889-luci.1}"
 BASE_URL="${BASE_URL:-https://github.com/$REPO/releases/download/$RELEASE_TAG}"
 TMP="/tmp/cloudpub-install.$$"
 trap 'rm -rf "$TMP"' EXIT INT TERM
@@ -29,6 +29,10 @@ fetch() {
 . /etc/openwrt_release
 ARCH="${DISTRIB_ARCH:-}"
 [ -n "$ARCH" ] || die "не удалось определить архитектуру"
+# Rockchip ARMv8 images normally use OpenWrt's aarch64_generic package arch.
+case "$ARCH" in
+	rockchip-armv8|rockchip_armv8) ARCH="aarch64_generic" ;;
+esac
 
 if command -v apk >/dev/null 2>&1; then
 	PM="apk"
