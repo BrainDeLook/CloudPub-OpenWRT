@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLO_VERSION="${CLO_VERSION:-3.4.889}"
+CLO_VERSION="${CLO_VERSION:-3.5.1056}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.3.0}"
+LUCI_VERSION="${LUCI_VERSION:-1.4.0}"
 RELEASE_VERSION="${RELEASE_VERSION:-v${CLO_VERSION}-luci.1}"
 FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"

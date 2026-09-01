@@ -1,6 +1,6 @@
 # CloudPub для OpenWrt
 
-Пакеты клиента [CloudPub](https://cloudpub.ru) 3.4.889 для OpenWrt с сервисом procd, UCI-конфигурацией и русским веб-интерфейсом LuCI.
+Пакеты клиента [CloudPub](https://cloudpub.ru) 3.5.1056 для OpenWrt с сервисом procd, UCI-конфигурацией и русским веб-интерфейсом LuCI.
 
 ## Быстрая установка
 
@@ -48,7 +48,7 @@ apk add --allow-untrusted ./cloudpub-*.apk ./luci-app-cloudpub-*.apk
 ```sh
 ./build.sh
 ARCHS="mipsel_24kc:mipsel" ./build.sh
-CLO_VERSION=3.4.889 FORMATS="ipk apk" ./build.sh
+CLO_VERSION=3.5.1056 FORMATS="ipk apk" ./build.sh
 ```
 
 Для `.apk` нужен `apk-tools` с командой `apk mkpkg`; CI запускает сборку в Alpine. Артефакты и `SHA256SUMS` создаются в `bin/`.
