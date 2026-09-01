@@ -24,8 +24,8 @@ jobs:
       - name: Build IPK and APK packages
         env:
           CLO_VERSION: ${{ github.event.inputs.clo_version || '3.5.1056' }}
-          LUCI_VERSION: 1.4.0
-          RELEASE_VERSION: v3.5.1056-luci.1
+          LUCI_VERSION: 1.4.1
+          RELEASE_VERSION: v3.5.1056-luci.2
         run: |
           docker run --rm -e CLO_VERSION="$CLO_VERSION" -e LUCI_VERSION="$LUCI_VERSION" -e RELEASE_VERSION="$RELEASE_VERSION" -v "$PWD:/work" -w /work alpine:edge sh -ec '
             apk add --no-cache bash curl tar file gettext git build-base lua5.1-dev
@@ -63,7 +63,7 @@ jobs:
             grep -q "^available=0$" /tmp/cloudpub-update-status
             PATH="/tmp/fakebin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
               BASE_URL="http://127.0.0.1:8080" VERSION="${{ github.event.inputs.clo_version || '3.5.1056' }}" \
-              PKG_RELEASE=1 LUCI_VERSION=1.4.0 RELEASE_VERSION="v3.5.1056-luci.1" \
+              PKG_RELEASE=1 LUCI_VERSION=1.4.1 RELEASE_VERSION="v3.5.1056-luci.2" \
               sh ./install.sh
           '
 
@@ -85,10 +85,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.1056-luci.1
-          name: CloudPub ${{ github.event.inputs.clo_version || '3.5.1056' }} for OpenWrt (LuCI 1.4.0)
+          tag_name: v3.5.1056-luci.2
+          name: CloudPub ${{ github.event.inputs.clo_version || '3.5.1056' }} for OpenWrt (LuCI 1.4.1)
           body: |
-            CloudPub client ${{ github.event.inputs.clo_version || '3.5.1056' }} for OpenWrt, LuCI add-on 1.4.0.
+            CloudPub client ${{ github.event.inputs.clo_version || '3.5.1056' }} for OpenWrt, LuCI add-on 1.4.1.
 
             - IPK packages for OpenWrt 24.10 and older
             - APK packages for OpenWrt 25.12 and newer

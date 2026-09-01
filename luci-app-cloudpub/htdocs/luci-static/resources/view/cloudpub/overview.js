@@ -49,19 +49,35 @@ function renderPublications(output) {
 		if (!match)
 			return E('div', {}, [ line ]);
 
-		var before = line.substring(0, match.index);
 		var url = match[1];
-		var after = line.substring(match.index + url.length);
-		return E('div', {}, [
-			before,
-			E('a', {
+		var nameMatch = line.match(/\[([^\]]+)\]/);
+		var linkAttrs = {
 				'href': url,
 				'target': '_blank',
 				'rel': 'noreferrer noopener',
 				'title': _('Open publication')
-			}, [ url ]),
-			after
-		]);
+		};
+		var links = [];
+		if (nameMatch) {
+			links.push({ start: nameMatch.index + 1, end: nameMatch.index + 1 + nameMatch[1].length,
+				node: E('a', linkAttrs, [ nameMatch[1] ]) });
+		}
+		links.push({ start: match.index, end: match.index + url.length,
+			node: E('a', linkAttrs, [ url ]) });
+		links.sort(function(a, b) { return a.start - b.start; });
+
+		var nodes = [], pos = 0;
+		links.forEach(function(link) {
+			if (link.start < pos)
+				return;
+			if (link.start > pos)
+				nodes.push(line.substring(pos, link.start));
+			nodes.push(link.node);
+			pos = link.end;
+		});
+		if (pos < line.length)
+			nodes.push(line.substring(pos));
+		return E('div', {}, nodes);
 	});
 }
 
@@ -205,6 +221,10 @@ return view.extend({
 					]);
 
 					callUpdater('update').then(function(result) {
+						/* Refresh the persisted state after installation so the old
+						 * available=1 flag cannot survive a successful update. */
+						return callUpdater('check').then(function() { return result; });
+					}).then(function(result) {
 						ui.hideModal();
 						ui.addNotification(null, E('div', {}, [
 							E('p', {}, _('CloudPub was updated successfully. The page will reload.')),
