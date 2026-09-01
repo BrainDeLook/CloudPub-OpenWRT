@@ -81,6 +81,34 @@ function renderPublications(output) {
 	});
 }
 
+function decoratePublicationNames(root, output) {
+	var links = {};
+	stripAnsi(output || '').split(/\r?\n/).forEach(function(line) {
+		var name = line.match(/\[([^\]]+)\]/);
+		var url = line.match(/(https:\/\/[^\s]+)/i) || line.match(/(http:\/\/[^\s]+)/i);
+		if (name && url)
+			links[name[1]] = url[1];
+	});
+
+	root.querySelectorAll('tr.cbi-section-table-row').forEach(function(row) {
+		var cells = row.querySelectorAll('td');
+		if (cells.length < 6)
+			return;
+		var cell = cells[1];
+		var name = (cell.textContent || '').trim();
+		var url = links[name];
+		if (!url || cell.querySelector('a'))
+			return;
+		cell.textContent = '';
+		cell.appendChild(E('a', {
+			'href': url,
+			'target': '_blank',
+			'rel': 'noreferrer noopener',
+			'title': _('Open publication')
+		}, [ name ]));
+	});
+}
+
 function renderStatus(isRunning) {
 	if (isRunning)
 		return '<em><span style="color:#2ea44f"><strong>' + _('Running') + '</strong></span></em>';
@@ -167,6 +195,9 @@ return view.extend({
 
 		o = s.option(form.Value, 'name', _('Name'));
 		o.placeholder = _('optional');
+		/* Keep the table cell available for a public link; editing remains
+		 * available through the row's Edit dialog. */
+		o.editable = false;
 
 		o = s.option(form.ListValue, 'proto', _('Protocol'));
 		o.value('http', 'HTTP');
@@ -295,8 +326,13 @@ return view.extend({
 					var ls = document.getElementById('cloudpub-ls');
 					if (ls)
 						ls.replaceChildren.apply(ls, renderPublications(data[1]));
+					decoratePublicationNames(mapEl, data[1]);
 				});
 			}, 10);
+
+			getPublicationList().then(function(output) {
+				decoratePublicationNames(mapEl, output);
+			});
 
 			return E('div', {}, [
 				mapEl,

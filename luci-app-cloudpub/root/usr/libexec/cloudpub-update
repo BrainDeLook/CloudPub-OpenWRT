@@ -81,6 +81,10 @@ install_update() {
 	}
 	sh -n "$tmp/install.sh"
 	sh "$tmp/install.sh"
+	# The installed package carries the new release marker. Remove the old
+	# cached state so LuCI cannot continue showing a stale update notification
+	# if the follow-up network check is unavailable.
+	rm -f "$STATE"
 }
 
 case "$ACTION" in
