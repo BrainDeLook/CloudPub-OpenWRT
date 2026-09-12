@@ -3,7 +3,7 @@
 		"description": "Grant access to LuCI app cloudpub",
 		"read": {
 			"ubus": {
-				"service": [ "list" ],
+				"service": [ "list", "action" ],
 				"file": [ "exec" ]
 			},
 			"file": {
