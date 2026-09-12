@@ -84,7 +84,7 @@ register_pub() {
 	set -- "$@" "$proto" "$target"
 
 	if ! output="$(clo "$@" 2>&1)"; then
-		logger -t cloudpub "failed to register publication: $proto $target"
+		logger -t cloudpub "failed to register publication: $proto $target: $output"
 		[ -z "$oldguid" ] || state_append "$cfg" "$oldsig" "$oldguid"
 		SYNC_OK=0
 		return 0
@@ -92,9 +92,11 @@ register_pub() {
 
 	guid="$(extract_guid "$output")"
 	if [ -z "$guid" ]; then
-		logger -t cloudpub "registered publication but could not determine its ID: $proto $target"
-		[ -z "$oldguid" ] || state_append "$cfg" "$oldsig" "$oldguid"
-		SYNC_OK=0
+		# Newer clo versions may not print the internal endpoint UUID. The
+		# registration itself still succeeded, so retain the signature and let
+		# the client keep the endpoint alive; a later change will re-register it.
+		logger -t cloudpub "registered publication (endpoint ID not reported): $proto $target"
+		state_append "$cfg" "$sig" ""
 		return 0
 	fi
 
