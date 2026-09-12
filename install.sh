@@ -4,8 +4,8 @@ set -eu
 REPO="${REPO:-BrainDeLook/CloudPub-OpenWRT}"
 VERSION="${VERSION:-3.5.1056}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.5.4}"
-RELEASE_TAG="${RELEASE_TAG:-v3.5.1056-luci.8}"
+LUCI_VERSION="${LUCI_VERSION:-1.5.5}"
+RELEASE_TAG="${RELEASE_TAG:-v3.5.1056-luci.9}"
 BASE_URL="${BASE_URL:-https://github.com/$REPO/releases/download/$RELEASE_TAG}"
 TMP="/tmp/cloudpub-install.$$"
 trap 'rm -rf "$TMP"' EXIT INT TERM

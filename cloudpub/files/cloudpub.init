@@ -9,17 +9,14 @@ USE_PROCD=1
 PROG=/usr/bin/clo
 CONFDIR=/etc/cloudpub
 CONF=$CONFDIR/client.toml
-HASHFILE=$CONFDIR/.publications.md5
+STATEFILE=$CONFDIR/publications.state
 
 clo() {
 	HOME="$CONFDIR" "$PROG" -c "$CONF" "$@"
 }
 
-# Build a signature string of all publish sections so we only
-# re-register publications when the UCI configuration changes.
-sig_pub() {
-	local cfg="$1"
-	local enabled proto target name auth acl header
+publication_signature() {
+	local cfg="$1" enabled proto target name auth acl header
 	config_get_bool enabled "$cfg" enabled 1
 	config_get proto "$cfg" proto
 	config_get target "$cfg" target
@@ -27,20 +24,49 @@ sig_pub() {
 	config_get auth "$cfg" auth
 	config_get acl "$cfg" acl
 	config_get header "$cfg" header
-	SIG="$SIG|$enabled,$proto,$target,$name,$auth,$acl,$header"
+	printf '%s' "$enabled|$proto|$target|$name|$auth|$acl|$header" | md5sum | cut -d' ' -f1
+}
+
+state_lookup() {
+	local cfg="$1"
+	[ -s "$STATEFILE" ] || return 0
+	awk -F '\t' -v section="$cfg" '$1 == section { print $2 "\t" $3; exit }' "$STATEFILE"
+}
+
+state_append() {
+	printf '%s\t%s\t%s\n' "$1" "$2" "$3" >> "$NEWSTATE"
+}
+
+extract_guid() {
+	printf '%s\n' "$1" | grep -Eo '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}' | head -n1
 }
 
 register_pub() {
 	local cfg="$1"
-	local enabled proto target name auth acl header a h
+	local enabled proto target name auth acl header a h sig saved oldsig oldguid output guid
 	config_get_bool enabled "$cfg" enabled 1
-	[ "$enabled" -eq 1 ] || return 0
+	sig="$(publication_signature "$cfg")"
+	saved="$(state_lookup "$cfg")"
+	oldsig="$(printf '%s\n' "$saved" | cut -f1)"
+	oldguid="$(printf '%s\n' "$saved" | cut -f2)"
+	[ -n "$saved" ] || { oldsig=""; oldguid=""; }
+
+	if [ "$enabled" -ne 1 ]; then
+		return 0
+	fi
 	config_get proto "$cfg" proto
 	config_get target "$cfg" target
 	if [ -z "$proto" ] || [ -z "$target" ]; then
 		logger -t cloudpub "skipping publication '$cfg': protocol or address is not set"
+		[ -z "$oldguid" ] || state_append "$cfg" "$oldsig" "$oldguid"
 		return 0
 	fi
+
+	if [ -n "$oldguid" ] && [ "$sig" = "$oldsig" ]; then
+		state_append "$cfg" "$sig" "$oldguid"
+		return 0
+	fi
+
 	config_get name "$cfg" name
 	config_get auth "$cfg" auth
 	config_get acl "$cfg" acl
@@ -57,33 +83,69 @@ register_pub() {
 	done
 	set -- "$@" "$proto" "$target"
 
-	if clo "$@" >/dev/null 2>&1; then
-		logger -t cloudpub "registered publication: $proto $target"
-	else
-		logger -t cloudpub "failed to register publication: $proto $target"
+	if ! output="$(clo "$@" 2>&1)"; then
+		logger -t cloudpub "failed to register publication: $proto $target: $output"
+		[ -z "$oldguid" ] || state_append "$cfg" "$oldsig" "$oldguid"
 		SYNC_OK=0
+		return 0
+	fi
+
+	guid="$(extract_guid "$output")"
+	if [ -z "$guid" ]; then
+		# Newer clo versions may not print the internal endpoint UUID. The
+		# registration itself still succeeded, so retain the signature and let
+		# the client keep the endpoint alive; a later change will re-register it.
+		logger -t cloudpub "registered publication (endpoint ID not reported): $proto $target"
+		state_append "$cfg" "$sig" ""
+		return 0
+	fi
+
+	state_append "$cfg" "$sig" "$guid"
+	logger -t cloudpub "registered publication: $proto $target ($guid)"
+
+	if [ -n "$oldguid" ] && [ "$oldguid" != "$guid" ]; then
+		if clo unpublish "$oldguid" >/dev/null 2>&1; then
+			logger -t cloudpub "removed replaced publication: $oldguid"
+		else
+			logger -t cloudpub "failed to remove replaced publication: $oldguid"
+			SYNC_OK=0
+		fi
 	fi
 }
 
+remove_stale_publications() {
+	local cfg sig guid
+	[ -s "$STATEFILE" ] || return 0
+	while IFS="$(printf '\t')" read -r cfg sig guid; do
+		[ -n "$guid" ] || continue
+		if ! awk -F '\t' -v section="$cfg" '$1 == section { found=1 } END { exit !found }' "$NEWSTATE"; then
+			if clo unpublish "$guid" >/dev/null 2>&1; then
+				logger -t cloudpub "removed deleted publication: $guid"
+			else
+				logger -t cloudpub "failed to remove deleted publication: $guid"
+				state_append "$cfg" "$sig" "$guid"
+				SYNC_OK=0
+			fi
+		fi
+	done < "$STATEFILE"
+}
+
 sync_publications() {
-	local token="$1" sig old
-
-	SIG="$token"
-	config_foreach sig_pub publish
-	sig=$(echo "$SIG" | md5sum | cut -d' ' -f1)
-	old=$(cat "$HASHFILE" 2>/dev/null)
-	[ "$sig" = "$old" ] && return 0
-
 	SYNC_OK=1
-	# Remove previously registered publications of this agent and
-	# re-register everything from the current UCI configuration.
-	clo clean >/dev/null 2>&1 || SYNC_OK=0
+	NEWSTATE="$STATEFILE.tmp.$$"
+	: > "$NEWSTATE"
+
+	# Register only new or changed sections. Existing sections retain their
+	# CloudPub GUID and public address; deleted sections are removed by GUID.
 	config_foreach register_pub publish
+	remove_stale_publications
 
 	if [ "$SYNC_OK" -eq 1 ]; then
-		echo "$sig" > "$HASHFILE"
+		mv "$NEWSTATE" "$STATEFILE"
+		rm -f "$CONFDIR/.publications.md5"
 	else
-		logger -t cloudpub "publication sync incomplete, will retry on next (re)start"
+		mv "$NEWSTATE" "$STATEFILE"
+		logger -t cloudpub "publication sync incomplete, failed entries will be retried on next (re)start"
 	fi
 }
 
@@ -118,7 +180,7 @@ start_service() {
 		clo set unsafe_tls false >/dev/null 2>&1
 	fi
 
-	sync_publications "$token"
+	sync_publications
 
 	procd_open_instance cloudpub
 	procd_set_param command "$PROG" -c "$CONF" -v -l "$log_level" run
