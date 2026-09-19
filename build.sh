@@ -98,10 +98,11 @@ build_cloudpub_ipk() {
 	local stage="$WORK/cloudpub-$owrt_arch"
 	local data="$stage/data" control="$stage/control"
 
-	mkdir -p "$data/usr/bin" "$data/etc/init.d" "$data/etc/config" "$data/etc/cloudpub" "$control"
+	mkdir -p "$data/usr/bin" "$data/usr/libexec" "$data/etc/init.d" "$data/etc/config" "$data/etc/cloudpub" "$control"
 
 	install -m 0755 "$clo_bin" "$data/usr/bin/clo"
 	install -m 0755 "$ROOT/cloudpub/files/cloudpub.init" "$data/etc/init.d/cloudpub"
+	install -m 0755 "$ROOT/cloudpub/files/cloudpub-run" "$data/usr/libexec/cloudpub-run"
 	install -m 0644 "$ROOT/cloudpub/files/cloudpub.config" "$data/etc/config/cloudpub"
 
 	local size
@@ -122,6 +123,7 @@ build_cloudpub_ipk() {
 
 	cat > "$control/conffiles" <<-EOF
 		/etc/config/cloudpub
+		/etc/cloudpub/
 	EOF
 
 	cat > "$control/postinst" <<-'EOF'

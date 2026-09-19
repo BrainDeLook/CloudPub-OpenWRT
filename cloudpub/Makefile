@@ -74,6 +74,8 @@ define Package/cloudpub/install
 	$(INSTALL_BIN) $$$$(find $(PKG_BUILD_DIR) -type f -name clo | head -n1) $(1)/usr/bin/clo
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/cloudpub.init $(1)/etc/init.d/cloudpub
+	$(INSTALL_DIR) $(1)/usr/libexec
+	$(INSTALL_BIN) ./files/cloudpub-run $(1)/usr/libexec/cloudpub-run
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/cloudpub.config $(1)/etc/config/cloudpub
 endef
