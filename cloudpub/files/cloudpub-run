@@ -29,12 +29,6 @@ remember_guid() {
 	grep -Fqx "$guid" "$DESIRED_GUIDS" 2>/dev/null || printf '%s\n' "$guid" >> "$DESIRED_GUIDS"
 }
 
-state_guid_for_target() {
-	local proto="$1" target="$2"
-	[ -r "$STATE_FILE" ] || return 0
-	awk -F '\t' -v proto="$proto" -v target="$target" '$1 == proto && $2 == target { print $3; exit }' "$STATE_FILE"
-}
-
 state_save_target() {
 	local proto="$1" target="$2" guid="$3" tmp
 	[ -n "$guid" ] || return 0
@@ -78,13 +72,6 @@ register_publication() {
 		remember_guid "$guid"
 		state_save_target "$proto" "$target" "$guid"
 		log "publication already registered: $proto $target ($guid)"
-		return 0
-	fi
-
-	guid="$(state_guid_for_target "$proto" "$target")"
-	if [ -n "$guid" ] && clo start "$guid" >/dev/null 2>&1; then
-		remember_guid "$guid"
-		log "restored publication: $proto $target ($guid)"
 		return 0
 	fi
 
@@ -148,12 +135,21 @@ set_client_options() {
 }
 
 reconcile() {
-	local attempt list_ok=0
+	local attempt list_ok=0 has_guid=0
 	REGISTERED=
 	for attempt in 1 2 3 4 5 6; do
 		if REGISTERED="$(clo ls 2>&1)"; then
 			list_ok=1
-			break
+			has_guid="$(extract_guid "$REGISTERED")"
+			# The HA add-on waits for the connected client to expose the
+			# server-side endpoint list. Avoid registering a duplicate while
+			# the list is still temporarily empty after boot.
+			if [ -n "$has_guid" ] || [ ! -s "$STATE_FILE" ] || [ "$attempt" -eq 6 ]; then
+				break
+			fi
+			log "CloudPub list is empty while saved publications exist (attempt $attempt/6)"
+			sleep 5
+			continue
 		fi
 		log "CloudPub list is not ready (attempt $attempt/6): $REGISTERED"
 		sleep 5
