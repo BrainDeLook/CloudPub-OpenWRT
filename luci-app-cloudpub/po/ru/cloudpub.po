@@ -121,3 +121,48 @@ msgstr "Активные публикации"
 
 msgid "No data (service is not running or no publications are registered)."
 msgstr "Нет данных (служба не запущена или публикации не зарегистрированы)."
+
+msgid "Updates"
+msgstr "Обновления"
+
+msgid "Checking ..."
+msgstr "Проверка ..."
+
+msgid "Check for updates"
+msgstr "Проверить обновления"
+
+msgid "Latest release: "
+msgstr "Последний релиз: "
+
+msgid "Install "
+msgstr "Установить "
+
+msgid "Installing update ..."
+msgstr "Установка обновления ..."
+
+msgid "Update check failed"
+msgstr "Не удалось проверить обновления"
+
+msgid "Update failed"
+msgstr "Не удалось установить обновление"
+
+msgid "CloudPub update installed."
+msgstr "Обновление CloudPub установлено."
+
+msgid "Update installed: reload LuCI if needed."
+msgstr "Обновление установлено: при необходимости обновите страницу LuCI."
+
+msgid "CloudPub links"
+msgstr "Ссылки CloudPub"
+
+msgid "Dashboard"
+msgstr "Личный кабинет"
+
+msgid "Documentation"
+msgstr "Документация"
+
+msgid "OpenWrt project"
+msgstr "Проект OpenWrt"
+
+msgid "Support"
+msgstr "Поддержка"

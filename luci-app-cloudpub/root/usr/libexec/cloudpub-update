@@ -1,0 +1,22 @@
+#!/bin/sh
+
+tag="$1"
+case "$tag" in
+    v[0-9]*) ;;
+    *) echo 'invalid release tag' >&2; exit 2 ;;
+esac
+
+url="https://github.com/BrainDeLook/CloudPub-OpenWRT/releases/download/$tag/install.sh"
+fetch='/usr/bin/uclient-fetch'
+[ -x "$fetch" ] || fetch='/usr/bin/wget'
+
+tmp='/tmp/cloudpub-install.sh'
+rm -f "$tmp"
+"$fetch" -qO "$tmp" "$url" || exit 1
+chmod 0700 "$tmp"
+sh "$tmp"
+rc=$?
+rm -f "$tmp"
+[ "$rc" -eq 0 ] || exit "$rc"
+/etc/init.d/cloudpub restart >/dev/null 2>&1 || true
+echo "CloudPub updated to $tag"

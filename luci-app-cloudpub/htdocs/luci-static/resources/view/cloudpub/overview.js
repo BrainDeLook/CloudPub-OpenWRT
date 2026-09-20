@@ -33,6 +33,20 @@ function getPublicationList() {
 	);
 }
 
+function checkForUpdate() {
+	return L.resolveDefault(
+		fs.exec_direct('/usr/libexec/cloudpub-update-check', []),
+		''
+	).then(function(output) {
+		var parts = String(output || '').trim().split('\t');
+		return {
+			tag: parts[0] || '',
+			name: parts[1] || parts[0] || '',
+			prerelease: parts[2] === 'true'
+		};
+	});
+}
+
 function stripAnsi(s) {
 	return String(s).replace(/\u001b\[[0-9;]*m/g, '');
 }
@@ -139,6 +153,63 @@ return view.extend({
 		o.depends('proto', 'https');
 
 		return m.render().then(function(mapEl) {
+			var updateStatus = E('span', { 'id': 'cloudpub-update-status' }, _('Checking ...'));
+			var updateButton = E('button', {
+				'class': 'cbi-button cbi-button-action',
+				'type': 'button',
+				'disabled': 'disabled'
+			}, _('Check for updates'));
+
+			function refreshUpdateStatus() {
+				updateButton.disabled = true;
+				updateStatus.textContent = _('Checking ...');
+				return checkForUpdate().then(function(info) {
+					if (!info.tag) {
+						updateStatus.textContent = _('Update check failed');
+						return;
+					}
+					updateStatus.textContent = _('Latest release: ') + info.tag;
+					updateButton.textContent = _('Install ') + info.tag;
+					updateButton.disabled = false;
+				}).catch(function() {
+					updateStatus.textContent = _('Update check failed');
+				});
+			}
+
+			updateButton.addEventListener('click', function() {
+				updateButton.disabled = true;
+				updateStatus.textContent = _('Installing update ...');
+				checkForUpdate().then(function(info) {
+					if (!info.tag)
+						throw new Error(_('Update check failed'));
+					return fs.exec('/usr/libexec/cloudpub-update', [ info.tag ]);
+				}).then(function() {
+					ui.addNotification(null, E('p', _('CloudPub update installed.')), 'info');
+					updateStatus.textContent = _('Update installed: reload LuCI if needed.');
+				}).catch(function(e) {
+					updateStatus.textContent = _('Update failed');
+					ui.addNotification(null, E('p', e.message || _('Update failed')), 'error');
+				}).finally(function() {
+					updateButton.disabled = false;
+				});
+			});
+
+			var updateSection = E('div', { 'class': 'cbi-section' }, [
+				E('h3', {}, _('Updates')),
+				E('p', {}, [ updateStatus, ' ', updateButton ])
+			]);
+			var linksSection = E('div', { 'class': 'cbi-section cloudpub-links' }, [
+				E('strong', {}, _('CloudPub links')),
+				E('span', {}, ' · '),
+				E('a', { 'href': 'https://cloudpub.ru/dashboard', 'target': '_blank', 'rel': 'noreferrer' }, _('Dashboard')),
+				E('span', {}, ' · '),
+				E('a', { 'href': 'https://cloudpub.ru/docs', 'target': '_blank', 'rel': 'noreferrer' }, _('Documentation')),
+				E('span', {}, ' · '),
+				E('a', { 'href': 'https://github.com/BrainDeLook/CloudPub-OpenWRT', 'target': '_blank', 'rel': 'noreferrer' }, _('OpenWrt project')),
+				E('span', {}, ' · '),
+				E('a', { 'href': 'https://cloudpub.ru/dashboard/support', 'target': '_blank', 'rel': 'noreferrer' }, _('Support'))
+			]);
+
 			poll.add(function() {
 				return Promise.all([ getServiceStatus(), getPublicationList() ]).then(function(data) {
 					var st = document.getElementById('cloudpub-status');
@@ -150,16 +221,20 @@ return view.extend({
 						ls.textContent = data[1] ? stripAnsi(data[1]).trim() : _('No data (service is not running or no publications are registered).');
 				});
 			}, 10);
+			refreshUpdateStatus();
+			poll.add(refreshUpdateStatus, 600);
 
 			return E('div', {}, [
 				mapEl,
+				updateSection,
 				E('div', { 'class': 'cbi-section' }, [
 					E('h3', {}, _('Active publications')),
 					E('pre', {
 						'id': 'cloudpub-ls',
 						'style': 'overflow-x:auto; padding:.5em; background:#00000010; border-radius:4px;'
 					}, [ _('Collecting data ...') ])
-				])
+				]),
+				linksSection
 			]);
 		});
 	}

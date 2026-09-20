@@ -8,7 +8,9 @@
 			},
 			"file": {
 				"/usr/bin/clo": [ "exec" ],
-				"/etc/init.d/cloudpub": [ "exec" ]
+				"/etc/init.d/cloudpub": [ "exec" ],
+				"/usr/libexec/cloudpub-update-check": [ "exec" ],
+				"/usr/libexec/cloudpub-update": [ "exec" ]
 			},
 			"uci": [ "cloudpub" ]
 		},

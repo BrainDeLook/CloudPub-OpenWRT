@@ -15,7 +15,7 @@ set -euo pipefail
 
 CLO_VERSION="${CLO_VERSION:-3.5.1056}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.0.0}"
+LUCI_VERSION="${LUCI_VERSION:-1.1.0}"
 FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"
 MAINTAINER="CloudPub-OpenWRT"
@@ -177,6 +177,7 @@ prepare_luci() {
 	mkdir -p "$data/www" "$control"
 	cp -a "$app/htdocs/." "$data/www/"
 	cp -a "$app/root/." "$data/"
+	chmod 0755 "$data/usr/libexec/cloudpub-update-check" "$data/usr/libexec/cloudpub-update"
 
 	# Compile the Russian translation when po2lmo is available
 	if command -v po2lmo >/dev/null 2>&1; then

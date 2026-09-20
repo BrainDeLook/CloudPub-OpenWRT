@@ -1,0 +1,17 @@
+#!/bin/sh
+
+API='https://api.github.com/repos/BrainDeLook/CloudPub-OpenWRT/releases?per_page=1'
+FETCH='/usr/bin/uclient-fetch'
+[ -x "$FETCH" ] || FETCH='/usr/bin/wget'
+
+json="$($FETCH -qO- "$API" 2>/dev/null)" || exit 1
+tag="$(printf '%s' "$json" | jsonfilter -e '@[0].tag_name' 2>/dev/null)"
+name="$(printf '%s' "$json" | jsonfilter -e '@[0].name' 2>/dev/null)"
+prerelease="$(printf '%s' "$json" | jsonfilter -e '@[0].prerelease' 2>/dev/null)"
+
+case "$tag" in
+    v[0-9]*) ;;
+    *) exit 1 ;;
+esac
+
+printf '%s\t%s\t%s\n' "$tag" "$name" "$prerelease"
