@@ -226,7 +226,7 @@ return view.extend({
 			return E('div', { 'class': 'cbi-section-node', 'style': 'margin:.5em 0' }, [ E('strong', {}, title), E('p', {}, status), check, ' ', install ]);
 			}
 
-			var updateSection = E('div', { 'class': 'cbi-section' }, [ E('h3', {}, _('Add-on updates')), E('p', {}, _('Updates are checked automatically every 24 hours.')), makeUpdateRow('stable', _('Stable release')), makeUpdateRow('beta', _('Beta release')) ]);
+			var updateSection = E('div', { 'class': 'cbi-section' }, [ E('h3', {}, _('Add-on updates')), E('p', {}, _('Updates are checked automatically every 24 hours.')), makeUpdateRow('stable', _('Stable release')) ]);
 			var linksSection = E('div', { 'class': 'cbi-section cloudpub-links' }, [
 				E('strong', {}, _('CloudPub links')),
 				E('span', {}, ' · '),
