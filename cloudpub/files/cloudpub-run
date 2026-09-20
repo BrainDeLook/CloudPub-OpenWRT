@@ -3,8 +3,6 @@
 # This follows the Home Assistant add-on: client.toml is persistent, while
 # clo ls is the source of truth for registered publication GUIDs.
 
-set -u
-
 PROG=/usr/bin/clo
 CONFDIR=/etc/cloudpub
 CONF=$CONFDIR/client.toml
@@ -31,8 +29,21 @@ remember_guid() {
 }
 
 registered_guid_for_target() {
-	local target="$1" line
-	line="$(printf '%s\n' "$REGISTERED" | grep -F "$target" | head -n1)"
+	local proto="$1" target="$2" line
+	line="$(printf '%s\n' "$REGISTERED" | awk -v prefix="$proto://" -v target="$target" '
+		index($0, prefix) {
+			start = index($0, prefix target)
+			if (!start && target ~ /^[0-9]+$/)
+				start = index($0, ":" target)
+			if (!start)
+				next
+			after = substr($0, start + length(target) + (substr($0, start, length(prefix)) == prefix ? length(prefix) : 1), 1)
+			if (after == "" || after !~ /[[:alnum:]_.-]/) {
+				print
+				exit
+			}
+		}
+	')"
 	extract_guid "$line"
 }
 
@@ -47,7 +58,7 @@ register_publication() {
 		return 0
 	fi
 
-	guid="$(registered_guid_for_target "$target")"
+	guid="$(registered_guid_for_target "$proto" "$target")"
 	if [ -n "$guid" ]; then
 		remember_guid "$guid"
 		log "publication already registered: $proto $target ($guid)"
@@ -77,7 +88,7 @@ register_publication() {
 
 remove_deleted_publications() {
 	local guid
-	printf '%s\n' "$REGISTERED" | grep -Eio '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | sort -u | while read -r guid; do
+	for guid in $(printf '%s\n' "$REGISTERED" | grep -Eio '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | sort -u); do
 		[ -n "$guid" ] || continue
 		if ! grep -Fqx "$guid" "$DESIRED_GUIDS" 2>/dev/null; then
 			if clo unpublish "$guid" >/dev/null 2>&1; then

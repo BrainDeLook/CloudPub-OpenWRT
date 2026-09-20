@@ -1,4 +1,4 @@
-name: Build ipk packages
+name: Build OpenWrt packages
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       clo_version:
         description: 'CloudPub client version'
         required: false
-        default: '3.1.0'
+        default: '3.5.1056'
 
 jobs:
   build:
@@ -30,18 +30,45 @@ jobs:
 
       - name: Build packages
         env:
-          CLO_VERSION: ${{ github.event.inputs.clo_version || '3.1.0' }}
-        run: ./build.sh
+          CLO_VERSION: ${{ github.event.inputs.clo_version || '3.5.1056' }}
+        run: |
+          docker run --rm -e CLO_VERSION="$CLO_VERSION" -v "$PWD:/work" -w /work alpine:edge sh -ec '
+            apk add --no-cache bash curl tar file gettext git build-base lua5.1-dev
+            git clone --depth=1 https://github.com/openwrt/luci /tmp/luci
+            src=$(find /tmp/luci -name po2lmo.c -path "*src*" | head -n1)
+            if [ -n "$src" ]; then
+              dir=$(dirname "$src")
+              (cd "$dir" && make po2lmo) || true
+              [ ! -x "$dir/po2lmo" ] || install -m 0755 "$dir/po2lmo" /usr/local/bin/po2lmo
+            fi
+            ./build.sh
+          '
+          sudo chown -R "$USER":"$(id -gn)" bin
+
+      - name: Validate OpenWrt 25.12.5 aarch64 package set
+        run: |
+          test -s bin/cloudpub-3.5.1056-r1-aarch64_generic.apk
+          test -s bin/luci-app-cloudpub-1.0.0-r1.apk
+          docker run --rm -v "$PWD:/work:ro" -w /work alpine:edge sh -ec '
+            apk manifest bin/cloudpub-3.5.1056-r1-aarch64_generic.apk >/dev/null
+            apk manifest bin/luci-app-cloudpub-1.0.0-r1.apk >/dev/null
+            sh -n cloudpub/files/cloudpub.init
+            sh -n cloudpub/files/cloudpub-run
+          '
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cloudpub-openwrt-ipk
-          path: bin/*.ipk
+          name: cloudpub-openwrt-packages
+          path: |
+            bin/*.ipk
+            bin/*.apk
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: bin/*.ipk
+          files: |
+            bin/*.ipk
+            bin/*.apk
           generate_release_notes: true

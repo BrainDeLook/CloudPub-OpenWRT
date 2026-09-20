@@ -6,16 +6,17 @@
 #
 # Usage:
 #   ./build.sh                 build for all architectures from the list below
-#   CLO_VERSION=3.1.0 ./build.sh
+#   CLO_VERSION=3.5.1056 ./build.sh
 #   ARCHS="mipsel_24kc:mipsel" ./build.sh   build only the given pairs
 #
 # Output: bin/*.ipk
 #
 set -euo pipefail
 
-CLO_VERSION="${CLO_VERSION:-3.1.0}"
+CLO_VERSION="${CLO_VERSION:-3.5.1056}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
 LUCI_VERSION="${LUCI_VERSION:-1.0.0}"
+FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"
 MAINTAINER="CloudPub-OpenWRT"
 
@@ -54,8 +55,9 @@ mipsel_mips32:mipsel
 "
 ARCHS="${ARCHS:-$DEFAULT_ARCHS}"
 
-log()  { printf '\033[1;32m>>> %s\033[0m\n' "$*"; }
+log()  { printf '\033[1;32m>>> %s\033[0m\n' "$*" >&2; }
 warn() { printf '\033[1;33m!!! %s\033[0m\n' "$*" >&2; }
+want_format() { case " $FORMATS " in *" $1 "*) return 0;; *) return 1;; esac; }
 
 mkdir -p "$BIN" "$DL"
 
@@ -68,6 +70,25 @@ pack_ipk() {
 	echo "2.0" > "$stage/debian-binary"
 	( cd "$stage" && tar --owner=0 --group=0 --numeric-owner -czf "$out" \
 		./debian-binary ./control.tar.gz ./data.tar.gz )
+	log "built $(basename "$out")"
+}
+
+pack_apk() {
+	local stage="$1" out="$2" name="$3" version="$4" arch="$5" description="$6" depends="${7:-}"
+	command -v apk >/dev/null 2>&1 || {
+		warn "apk-tools is required for .apk output (set FORMATS=ipk to skip)"
+		return 1
+	}
+	set -- apk mkpkg \
+		--info "name:$name" --info "version:$version-r$PKG_RELEASE" \
+		--info "description:$description" --info "arch:$arch" \
+		--info "license:Apache-2.0" --info "origin:CloudPub-OpenWRT" \
+		--info "url:https://github.com/BrainDeLook/CloudPub-OpenWRT" \
+		--info "maintainer:$MAINTAINER"
+	[ -z "$depends" ] || set -- "$@" --info "depends:$depends"
+	[ ! -f "$stage/post-install" ] || set -- "$@" --script "post-install:$stage/post-install"
+	[ ! -f "$stage/pre-deinstall" ] || set -- "$@" --script "pre-deinstall:$stage/pre-deinstall"
+	"$@" --files "$stage/data" --output "$out"
 	log "built $(basename "$out")"
 }
 
@@ -93,7 +114,7 @@ extract_clo() {
 	echo "$bin"
 }
 
-build_cloudpub_ipk() {
+prepare_cloudpub() {
 	local owrt_arch="$1" clo_bin="$2"
 	local stage="$WORK/cloudpub-$owrt_arch"
 	local data="$stage/data" control="$stage/control"
@@ -145,10 +166,10 @@ build_cloudpub_ipk() {
 	EOF
 
 	chmod 0755 "$control/postinst" "$control/prerm"
-	pack_ipk "$stage" "$BIN/cloudpub_${CLO_VERSION}-${PKG_RELEASE}_${owrt_arch}.ipk"
+	echo "$stage"
 }
 
-build_luci_ipk() {
+prepare_luci() {
 	local stage="$WORK/luci-app-cloudpub"
 	local data="$stage/data" control="$stage/control"
 	local app="$ROOT/luci-app-cloudpub"
@@ -203,12 +224,15 @@ build_luci_ipk() {
 	EOF
 
 	chmod 0755 "$control/postinst" "$control/postrm"
-	pack_ipk "$stage" "$BIN/luci-app-cloudpub_${LUCI_VERSION}-${PKG_RELEASE}_all.ipk"
+	cp "$control/postinst" "$stage/post-install"
+	cp "$control/postrm" "$stage/pre-deinstall"
+	echo "$stage"
 }
 
 # --- main ---------------------------------------------------------------
 
 declare -A CLO_BINS  # clo_arch -> extracted binary path
+BUILT=0
 
 for pair in $ARCHS; do
 	owrt_arch="${pair%%:*}"
@@ -238,10 +262,17 @@ for pair in $ARCHS; do
 	fi
 
 	[ "${CLO_BINS[$clo_arch]}" = "MISSING" ] && continue
-	build_cloudpub_ipk "$owrt_arch" "${CLO_BINS[$clo_arch]}"
+	stage="$(prepare_cloudpub "$owrt_arch" "${CLO_BINS[$clo_arch]}")"
+	want_format ipk && pack_ipk "$stage" "$BIN/cloudpub_${CLO_VERSION}-${PKG_RELEASE}_${owrt_arch}.ipk"
+	want_format apk && pack_apk "$stage" "$BIN/cloudpub-${CLO_VERSION}-r${PKG_RELEASE}-${owrt_arch}.apk" cloudpub "$CLO_VERSION" "$owrt_arch" "CloudPub tunnel client"
+	BUILT=$((BUILT + 1))
 done
 
-build_luci_ipk
+[ "$BUILT" -gt 0 ] || { warn "no client packages were built"; exit 1; }
+
+stage="$(prepare_luci)"
+want_format ipk && pack_ipk "$stage" "$BIN/luci-app-cloudpub_${LUCI_VERSION}-${PKG_RELEASE}_all.ipk"
+want_format apk && pack_apk "$stage" "$BIN/luci-app-cloudpub-${LUCI_VERSION}-r${PKG_RELEASE}.apk" luci-app-cloudpub "$LUCI_VERSION" noarch "LuCI support for CloudPub client" "cloudpub luci-base"
 
 log "done, packages are in $BIN"
 ls -la "$BIN"
