@@ -151,8 +151,6 @@ prepare_cloudpub() {
 	cat > "$control/postinst" <<-'EOF'
 		#!/bin/sh
 		[ -n "${IPKG_INSTROOT}" ] || {
-			/etc/init.d/cloudpub enable
-			/etc/init.d/cloudpub start
 			if [ -x /sbin/uci ]; then
 				current="$(uci -q get ucitrack.cloudpub.affects 2>/dev/null || true)"
 				case " $current " in
@@ -164,6 +162,8 @@ prepare_cloudpub() {
 						;;
 				esac
 			fi
+			/etc/init.d/cloudpub enable
+			/etc/init.d/cloudpub start
 		}
 		exit 0
 	EOF
