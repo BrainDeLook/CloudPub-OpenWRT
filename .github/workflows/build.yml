@@ -80,4 +80,3 @@ jobs:
             bin/*.ipk
             bin/*.apk
             bin/install.sh
-          generate_release_notes: true
