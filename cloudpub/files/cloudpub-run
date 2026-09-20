@@ -132,7 +132,7 @@ set_client_options() {
 	# absent. Persist the first computed value so reboots keep one client identity.
 	if ! grep -q '^hwid[[:space:]]*=' "$CONF" 2>/dev/null; then
 		hwid="$(clo get hwid 2>/dev/null)"
-		[ -n "$hwid" ] && clo set hwid -- "$hwid" >/dev/null 2>&1 || return 1
+		[ -n "$hwid" ] && clo set hwid "$hwid" >/dev/null 2>&1 || return 1
 	fi
 	# Do not write the default on every boot: this can rewrite client.toml and
 	# discard state that the client uses to reconnect existing publications.
