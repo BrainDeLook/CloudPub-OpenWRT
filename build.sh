@@ -153,6 +153,17 @@ prepare_cloudpub() {
 		[ -n "${IPKG_INSTROOT}" ] || {
 			/etc/init.d/cloudpub enable
 			/etc/init.d/cloudpub start
+			if [ -x /sbin/uci ]; then
+				current="$(uci -q get ucitrack.cloudpub.affects 2>/dev/null || true)"
+				case " $current " in
+					*" cloudpub "*) ;;
+					*)
+						uci -q set ucitrack.cloudpub=cloudpub
+						uci -q add_list ucitrack.cloudpub.affects='cloudpub'
+						uci -q commit ucitrack
+						;;
+				esac
+			fi
 		}
 		exit 0
 	EOF
