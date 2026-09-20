@@ -11,6 +11,9 @@ on:
         required: false
         default: '3.5.1056'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
