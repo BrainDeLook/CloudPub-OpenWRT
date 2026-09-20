@@ -187,3 +187,39 @@ msgstr "Стабильный релиз"
 
 msgid "Beta release"
 msgstr "Beta-релиз"
+
+msgid "Add-on updates"
+msgstr "Обновления дополнения"
+
+msgid "Updates are checked automatically every 24 hours."
+msgstr "Проверка обновлений выполняется автоматически каждые 24 часа."
+
+msgid "Update status has not been checked yet."
+msgstr "Статус обновления ещё не проверялся."
+
+msgid "Update available: %s → %s"
+msgstr "Доступно обновление: %s → %s"
+
+msgid "The latest add-on version is installed: %s"
+msgstr "Установлена последняя версия дополнения: %s"
+
+msgid "Last checked: %s"
+msgstr "Последняя проверка: %s"
+
+msgid "Update CloudPub now? The service will be restarted."
+msgstr "Обновить CloudPub сейчас? Служба будет перезапущена."
+
+msgid "Downloading and installing the latest release ..."
+msgstr "Загрузка и установка последнего релиза ..."
+
+msgid "CloudPub was updated successfully. The page will reload."
+msgstr "CloudPub успешно обновлён. Страница будет перезагружена."
+
+msgid "Update add-on"
+msgstr "Обновить дополнение"
+
+msgid "unknown"
+msgstr "неизвестно"
+
+msgid "Open publication"
+msgstr "Открыть публикацию"

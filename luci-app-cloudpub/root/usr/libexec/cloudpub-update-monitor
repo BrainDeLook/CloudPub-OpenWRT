@@ -1,0 +1,7 @@
+#!/bin/sh
+
+while :; do
+	/usr/libexec/cloudpub-update check stable >/dev/null 2>&1 || true
+	/usr/libexec/cloudpub-update check beta >/dev/null 2>&1 || true
+	sleep 86400
+done

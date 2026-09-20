@@ -33,19 +33,22 @@ function getPublicationList() {
 	);
 }
 
-function checkForUpdate(channel) {
-	return L.resolveDefault(
-		fs.exec_direct('/usr/libexec/cloudpub-update-check', [ channel ]),
-		''
-	).then(function(output) {
-		var parts = String(output || '').trim().split('\t');
-		return {
-			status: parts[0] || '',
-			channel: parts[1] || channel,
-			tag: parts[2] || '',
-			name: parts[3] || parts[2] || '',
-			current: parts[4] || ''
-		};
+function parseUpdateState(output) {
+	var state = {};
+	String(output || '').trim().split(/\n/).forEach(function(line) {
+		var pos = line.indexOf('=');
+		if (pos > 0)
+			state[line.substring(0, pos)] = line.substring(pos + 1);
+	});
+	return state;
+}
+
+function callUpdater(action, channel) {
+	return fs.exec('/usr/libexec/cloudpub-update', [ action, channel ]).then(function(res) {
+		var output = [ res.stdout, res.stderr ].filter(Boolean).join('\n').trim();
+		if (res.code !== 0)
+			throw new Error(output || _('Update check failed.'));
+		return { state: parseUpdateState(res.stdout), output: output };
 	});
 }
 
@@ -59,38 +62,49 @@ function renderStatus(isRunning) {
 	return '<em><span style="color:#d73a49"><strong>' + _('Not running') + '</strong></span></em>';
 }
 
-function renderPublications(container, output) {
+function renderPublications(output) {
 	var text = stripAnsi(output || '').trim();
-	while (container.firstChild)
-		container.removeChild(container.firstChild);
+	if (!text)
+		return [ E('em', {}, [ _('No data (service is not running or no publications are registered).') ]) ];
 
-	if (!text) {
-		container.appendChild(document.createTextNode(_('No data (service is not running or no publications are registered).')));
-		return;
-	}
-
-	text.split(/\r?\n/).forEach(function(line) {
-		var match = line.match(/^(\S+\s+[0-9a-f-]{36})\s+(?:\[([^\]]+)\]\s+)?(https?:\/\/\S+)\s+->\s+(https?:\/\/\S+)$/i);
-		var row = E('div', {});
-		if (!match) {
-			row.textContent = line;
-		} else {
-			row.appendChild(document.createTextNode(match[1] + ' '));
-			if (match[2]) {
-				row.appendChild(E('a', {
-					'href': match[4], 'target': '_blank', 'rel': 'noreferrer'
-				}, '[' + match[2] + ']'));
-				row.appendChild(document.createTextNode(' '));
-			}
-			row.appendChild(E('a', {
-				'href': match[3], 'target': '_blank', 'rel': 'noreferrer'
-			}, match[3]));
-			row.appendChild(document.createTextNode(' -> '));
-			row.appendChild(E('a', {
-				'href': match[4], 'target': '_blank', 'rel': 'noreferrer'
-			}, match[4]));
+	return text.split(/\r?\n/).map(function(line) {
+		var local = line.match(/(https?:\/\/[^\s]+)\s+->/i);
+		var publicUrl = line.match(/->\s+(https?:\/\/[^\s]+)/i);
+		var url = publicUrl ? publicUrl[1] : (local ? local[1] : null);
+		if (!url)
+			return E('div', {}, [ line ]);
+		var name = line.match(/\[([^\]]+)\]/);
+		var attrs = { 'target': '_blank', 'rel': 'noreferrer noopener', 'title': _('Open publication') };
+		var nodes = [], pos = 0;
+		function addLink(value, href, start) {
+			if (start < pos) return;
+			if (start > pos) nodes.push(line.substring(pos, start));
+			var a = Object.assign({}, attrs, { 'href': href });
+			nodes.push(E('a', a, [ value ]));
+			pos = start + value.length;
 		}
-		container.appendChild(row);
+		if (name) addLink('[' + name[1] + ']', url, name.index);
+		if (local) addLink(local[1], local[1], local.index);
+		if (publicUrl) addLink(publicUrl[1], publicUrl[1], publicUrl.index + 3);
+		if (pos < line.length) nodes.push(line.substring(pos));
+		return E('div', {}, nodes);
+	});
+}
+
+function decoratePublicationNames(root, output) {
+	var links = {};
+	stripAnsi(output || '').split(/\r?\n/).forEach(function(line) {
+		var name = line.match(/\[([^\]]+)\]/);
+		var url = line.match(/->\s+(https?:\/\/[^\s]+)/i) || line.match(/(https?:\/\/[^\s]+)/i);
+		if (name && url) links[name[1]] = url[1];
+	});
+	root.querySelectorAll('tr.cbi-section-table-row').forEach(function(row) {
+		var cells = row.querySelectorAll('td');
+		if (cells.length < 2) return;
+		var cell = cells[1], name = (cell.textContent || '').trim(), url = links[name];
+		if (!url || cell.querySelector('a')) return;
+		cell.textContent = '';
+		cell.appendChild(E('a', { 'href': url, 'target': '_blank', 'rel': 'noreferrer noopener', 'title': _('Open publication') }, [ name ]));
 	});
 }
 
@@ -152,6 +166,7 @@ return view.extend({
 
 		o = s.option(form.Value, 'name', _('Name'));
 		o.placeholder = _('optional');
+		o.editable = false;
 
 		o = s.option(form.ListValue, 'proto', _('Protocol'));
 		o.value('http', 'HTTP');
@@ -191,67 +206,27 @@ return view.extend({
 
 		return m.render().then(function(mapEl) {
 			function makeUpdateRow(channel, title) {
-				var selectedTag = '';
-				var status = E('span', {}, _('Not checked'));
-				var checkButton = E('button', {
-					'class': 'cbi-button', 'type': 'button'
-				}, _('Check'));
-				var installButton = E('button', {
-					'class': 'cbi-button cbi-button-action', 'type': 'button',
-					'style': 'display:none; margin-left:.5em'
-				}, _('Install update'));
-
-				checkButton.addEventListener('click', function() {
-					checkButton.disabled = true;
-					installButton.style.display = 'none';
-					status.textContent = _('Checking ...');
-					checkForUpdate(channel).then(function(info) {
-						selectedTag = info.tag;
-						if (!info.tag)
-							throw new Error(_('Update check failed'));
-						if (info.status === 'update') {
-							status.textContent = _('New release available: ') + info.tag;
-							installButton.textContent = _('Install ') + info.tag;
-							installButton.style.display = '';
-						} else {
-							status.textContent = _('No new releases. Latest: ') + info.tag;
-						}
-					}).catch(function() {
-						status.textContent = _('Update check failed');
-					}).then(function() {
-						checkButton.disabled = false;
-					});
-				});
-
-				installButton.addEventListener('click', function() {
-					if (!selectedTag)
-						return;
-					checkButton.disabled = true;
-					installButton.disabled = true;
-					status.textContent = _('Installing update ...');
-					fs.exec('/usr/libexec/cloudpub-update', [ selectedTag ]).then(function() {
-						installButton.style.display = 'none';
-						status.textContent = _('Update installed: reload LuCI if needed.');
-						ui.addNotification(null, E('p', _('CloudPub update installed.')), 'info');
-					}).catch(function(e) {
-						status.textContent = _('Update failed');
-						ui.addNotification(null, E('p', e.message || _('Update failed')), 'error');
-					}).then(function() {
-						checkButton.disabled = false;
-						installButton.disabled = false;
-					});
-				});
-
-				return E('div', { 'style': 'display:flex; gap:.75em; align-items:center; flex-wrap:wrap; margin:.5em 0' }, [
-					E('strong', { 'style': 'min-width:10em' }, title), checkButton, status, installButton
-				]);
+				var status = E('span', {}, _('Update status has not been checked yet.'));
+				var check = E('button', { 'class': 'cbi-button cbi-button-action', 'type': 'button' }, _('Check for updates'));
+				var install = E('button', { 'class': 'cbi-button cbi-button-positive', 'type': 'button', 'style': 'display:none; margin-left:.5em' }, _('Update add-on'));
+				function render(state) {
+					var current = state.current || _('unknown'), latest = state.latest || current, checked = Number(state.checked || 0);
+					if (state.available === '1') { status.textContent = _('Update available: %s → %s').format(current, latest); status.style.color = '#d97706'; install.style.display = ''; }
+					else { status.textContent = _('The latest add-on version is installed: %s').format(current); status.style.color = '#2ea44f'; install.style.display = 'none'; }
+					if (checked > 0) status.textContent += ' · ' + _('Last checked: %s').format(new Date(checked * 1000).toLocaleString());
+				}
+			function checkState(action) { return callUpdater(action, channel).then(function(result) { render(result.state); return result; }); }
+			check.addEventListener('click', function() { check.disabled = true; check.classList.add('spinning'); checkState('check').catch(function(e) { status.textContent = e.message; status.style.color = '#d73a49'; }).then(function() { check.disabled = false; check.classList.remove('spinning'); }); });
+			install.addEventListener('click', function() {
+				if (!window.confirm(_('Update CloudPub now? The service will be restarted.'))) return;
+				check.disabled = true; install.disabled = true; status.textContent = _('Downloading and installing the latest release ...');
+				checkState('update').then(function() { ui.addNotification(null, E('p', _('CloudPub was updated successfully. The page will reload.')), 'info'); window.setTimeout(function() { window.location.reload(); }, 3000); }).catch(function(e) { status.textContent = e.message; status.style.color = '#d73a49'; }).then(function() { check.disabled = false; install.disabled = false; });
+			});
+			checkState('status').catch(function(e) { status.textContent = e.message; status.style.color = '#d73a49'; });
+			return E('div', { 'class': 'cbi-section-node', 'style': 'margin:.5em 0' }, [ E('strong', {}, title), E('p', {}, status), check, ' ', install ]);
 			}
 
-			var updateSection = E('div', { 'class': 'cbi-section' }, [
-				E('h3', {}, _('Updates')),
-				makeUpdateRow('stable', _('Stable release')),
-				makeUpdateRow('beta', _('Beta release'))
-			]);
+			var updateSection = E('div', { 'class': 'cbi-section' }, [ E('h3', {}, _('Add-on updates')), E('p', {}, _('Updates are checked automatically every 24 hours.')), makeUpdateRow('stable', _('Stable release')), makeUpdateRow('beta', _('Beta release')) ]);
 			var linksSection = E('div', { 'class': 'cbi-section cloudpub-links' }, [
 				E('strong', {}, _('CloudPub links')),
 				E('span', {}, ' · '),
@@ -272,9 +247,12 @@ return view.extend({
 
 					var ls = document.getElementById('cloudpub-ls');
 					if (ls)
-						renderPublications(ls, data[1]);
+						ls.replaceChildren.apply(ls, renderPublications(data[1]));
+					decoratePublicationNames(mapEl, data[1]);
 				});
 			}, 10);
+
+			getPublicationList().then(function(output) { decoratePublicationNames(mapEl, output); });
 
 			return E('div', {}, [
 				mapEl,

@@ -1,22 +1,118 @@
 #!/bin/sh
+set -eu
 
-tag="$1"
-case "$tag" in
-    v[0-9]*) ;;
-    *) echo 'invalid release tag' >&2; exit 2 ;;
+REPO="BrainDeLook/CloudPub-OpenWRT"
+ACTION="${1:-status}"
+CHANNEL="${2:-stable}"
+STATE="/tmp/cloudpub-update-$CHANNEL"
+CURRENT_FILE="/etc/cloudpub/release-tag"
+
+case "$CHANNEL" in
+    stable|beta) ;;
+    *) echo "invalid channel" >&2; exit 2 ;;
 esac
 
-url="https://github.com/BrainDeLook/CloudPub-OpenWRT/releases/download/$tag/install.sh"
-fetch='/usr/bin/uclient-fetch'
-[ -x "$fetch" ] || fetch='/usr/bin/wget'
+fetch() {
+	if command -v uclient-fetch >/dev/null 2>&1; then
+		uclient-fetch -q -O "$2" "$1"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -q -O "$2" "$1"
+	elif command -v curl >/dev/null 2>&1; then
+		curl -fsSL "$1" -o "$2"
+	else
+		echo "No downloader found" >&2
+		exit 1
+	fi
+}
 
-tmp='/tmp/cloudpub-install.sh'
-rm -f "$tmp"
-"$fetch" -qO "$tmp" "$url" || exit 1
-chmod 0700 "$tmp"
-sh "$tmp"
-rc=$?
-rm -f "$tmp"
-[ "$rc" -eq 0 ] || exit "$rc"
-/etc/init.d/cloudpub restart >/dev/null 2>&1 || true
-echo "CloudPub updated to $tag"
+current_release() {
+	tr -d '\r\n ' < "$CURRENT_FILE" 2>/dev/null || printf 'unknown'
+}
+
+latest_release() {
+	local tmp="$1" json i tag prerelease draft
+	if [ "$CHANNEL" = stable ]; then
+		fetch "https://github.com/$REPO/releases/latest/download/release" "$tmp"
+		tr -d '\r\n ' < "$tmp"
+		return 0
+	fi
+	fetch "https://api.github.com/repos/$REPO/releases?per_page=50" "$tmp"
+	json="$(cat "$tmp")"
+	i=0
+	while [ "$i" -lt 50 ]; do
+		tag="$(printf '%s' "$json" | jsonfilter -e "@[$i].tag_name" 2>/dev/null)"
+		[ -n "$tag" ] || break
+		prerelease="$(printf '%s' "$json" | jsonfilter -e "@[$i].prerelease" 2>/dev/null)"
+		draft="$(printf '%s' "$json" | jsonfilter -e "@[$i].draft" 2>/dev/null)"
+		if [ "$prerelease" = true ] && [ "$draft" != true ]; then
+			printf '%s' "$tag"
+			return 0
+		fi
+		i=$((i + 1))
+	done
+	return 1
+}
+
+write_state() {
+	local current="$1" latest="$2" available="$3" checked="$4"
+	umask 077
+	{
+		printf 'current=%s\n' "$current"
+		printf 'latest=%s\n' "$latest"
+		printf 'available=%s\n' "$available"
+		printf 'checked=%s\n' "$checked"
+	} > "$STATE.tmp"
+	mv "$STATE.tmp" "$STATE"
+}
+
+status() {
+	if [ -s "$STATE" ]; then
+		cat "$STATE"
+	else
+		current="$(current_release)"
+		write_state "$current" "$current" 0 0
+		cat "$STATE"
+	fi
+}
+
+check_update() {
+	tmp="/tmp/cloudpub-update-release.$$"
+	trap 'rm -f "$tmp"' EXIT INT TERM
+	current="$(current_release)"
+	latest="$(latest_release "$tmp")" || {
+		echo "Unable to check the latest $CHANNEL CloudPub release." >&2
+		return 1
+	}
+	case "$latest" in
+		v[0-9]*) ;;
+		*) echo "Invalid release returned by GitHub." >&2; return 1 ;;
+	esac
+	available=0
+	[ "$latest" = "$current" ] || available=1
+	write_state "$current" "$latest" "$available" "$(date +%s)"
+	status
+}
+
+install_update() {
+	tmp="/tmp/cloudpub-update-install.$$"
+	trap 'rm -rf "$tmp"' EXIT INT TERM
+	mkdir -p "$tmp"
+	if [ ! -s "$STATE" ]; then
+		check_update >/dev/null
+	fi
+	latest="$(sed -n 's/^latest=//p' "$STATE")"
+	[ -n "$latest" ] || { echo "No release selected" >&2; exit 1; }
+	echo "Downloading the $CHANNEL CloudPub installer..."
+	fetch "https://github.com/$REPO/releases/download/$latest/install.sh" "$tmp/install.sh"
+	[ -s "$tmp/install.sh" ] || { echo "Downloaded installer is empty" >&2; exit 1; }
+	sh -n "$tmp/install.sh"
+	sh "$tmp/install.sh"
+	rm -f "$STATE"
+}
+
+case "$ACTION" in
+	status) status ;;
+	check) check_update ;;
+	update) install_update ;;
+	*) echo "Usage: $0 {status|check|update} {stable|beta}" >&2; exit 2 ;;
+esac

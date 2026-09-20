@@ -14,8 +14,9 @@
 set -euo pipefail
 
 CLO_VERSION="${CLO_VERSION:-3.5.1056}"
+RELEASE_VERSION="${RELEASE_VERSION:-v${CLO_VERSION}}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.2.0}"
+LUCI_VERSION="${LUCI_VERSION:-1.3.0}"
 FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"
 MAINTAINER="CloudPub-OpenWRT"
@@ -177,7 +178,7 @@ prepare_luci() {
 	mkdir -p "$data/www" "$control"
 	cp -a "$app/htdocs/." "$data/www/"
 	cp -a "$app/root/." "$data/"
-	chmod 0755 "$data/usr/libexec/cloudpub-update-check" "$data/usr/libexec/cloudpub-update"
+	chmod 0755 "$data/usr/libexec/cloudpub-update-check" "$data/usr/libexec/cloudpub-update" "$data/usr/libexec/cloudpub-update-monitor" "$data/etc/init.d/cloudpub-update-check"
 
 	# Compile the Russian translation when po2lmo is available
 	if command -v po2lmo >/dev/null 2>&1; then
@@ -211,6 +212,8 @@ prepare_luci() {
 			rm -f /tmp/luci-indexcache*
 			rm -rf /tmp/luci-modulecache/
 			/etc/init.d/rpcd reload 2>/dev/null
+			/etc/init.d/cloudpub-update-check enable 2>/dev/null
+			/etc/init.d/cloudpub-update-check start 2>/dev/null
 		}
 		exit 0
 	EOF
@@ -274,6 +277,7 @@ done
 stage="$(prepare_luci)"
 want_format ipk && pack_ipk "$stage" "$BIN/luci-app-cloudpub_${LUCI_VERSION}-${PKG_RELEASE}_all.ipk"
 want_format apk && pack_apk "$stage" "$BIN/luci-app-cloudpub-${LUCI_VERSION}-r${PKG_RELEASE}.apk" luci-app-cloudpub "$LUCI_VERSION" noarch "LuCI support for CloudPub client" "cloudpub luci-base"
+printf '%s\n' "$RELEASE_VERSION" > "$BIN/release"
 
 log "done, packages are in $BIN"
 ls -la "$BIN"
