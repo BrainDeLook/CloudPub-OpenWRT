@@ -6,6 +6,7 @@
 PROG=/usr/bin/clo
 CONFDIR=/etc/cloudpub
 CONF=$CONFDIR/client.toml
+STATE_FILE=$CONFDIR/publications.state
 LOG_LEVEL=info
 REGISTERED=
 DESIRED_GUIDS=/tmp/cloudpub-desired-guids.$$
@@ -26,6 +27,31 @@ remember_guid() {
 	local guid="$1"
 	[ -n "$guid" ] || return 0
 	grep -Fqx "$guid" "$DESIRED_GUIDS" 2>/dev/null || printf '%s\n' "$guid" >> "$DESIRED_GUIDS"
+}
+
+state_guid_for_target() {
+	local proto="$1" target="$2"
+	[ -r "$STATE_FILE" ] || return 0
+	awk -F '\t' -v proto="$proto" -v target="$target" '$1 == proto && $2 == target { print $3; exit }' "$STATE_FILE"
+}
+
+state_save_target() {
+	local proto="$1" target="$2" guid="$3" tmp
+	[ -n "$guid" ] || return 0
+	tmp="$STATE_FILE.tmp.$$"
+	awk -F '\t' -v OFS='\t' -v proto="$proto" -v target="$target" \
+		'!($1 == proto && $2 == target) { print }' "$STATE_FILE" 2>/dev/null > "$tmp"
+	printf '%s\t%s\t%s\n' "$proto" "$target" "$guid" >> "$tmp"
+	mv "$tmp" "$STATE_FILE"
+	chmod 0600 "$STATE_FILE"
+}
+
+state_remove_guid() {
+	local guid="$1" tmp
+	[ -n "$guid" ] && [ -r "$STATE_FILE" ] || return 0
+	tmp="$STATE_FILE.tmp.$$"
+	awk -F '\t' -v guid="$guid" '$3 != guid { print }' OFS='\t' "$STATE_FILE" > "$tmp"
+	mv "$tmp" "$STATE_FILE"
 }
 
 registered_guid_for_target() {
@@ -50,7 +76,15 @@ register_publication() {
 	guid="$(registered_guid_for_target "$proto" "$target")"
 	if [ -n "$guid" ]; then
 		remember_guid "$guid"
+		state_save_target "$proto" "$target" "$guid"
 		log "publication already registered: $proto $target ($guid)"
+		return 0
+	fi
+
+	guid="$(state_guid_for_target "$proto" "$target")"
+	if [ -n "$guid" ] && clo start "$guid" >/dev/null 2>&1; then
+		remember_guid "$guid"
+		log "restored publication: $proto $target ($guid)"
 		return 0
 	fi
 
@@ -68,6 +102,7 @@ register_publication() {
 	if output="$(clo "$@" 2>&1)"; then
 		guid="$(extract_guid "$output")"
 		remember_guid "$guid"
+		state_save_target "$proto" "$target" "$guid"
 		log "registered publication: $proto $target"
 	else
 		log "failed to register publication: $proto $target: $output"
@@ -81,6 +116,7 @@ remove_deleted_publications() {
 		[ -n "$guid" ] || continue
 		if ! grep -Fqx "$guid" "$DESIRED_GUIDS" 2>/dev/null; then
 			if clo unpublish "$guid" >/dev/null 2>&1; then
+				state_remove_guid "$guid"
 				log "removed deleted publication: $guid"
 			else
 				log "failed to remove deleted publication: $guid"
