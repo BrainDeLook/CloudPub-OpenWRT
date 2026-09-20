@@ -4,7 +4,7 @@ set -eu
 REPO="${REPO:-BrainDeLook/CloudPub-OpenWRT}"
 RELEASE_TAG="${RELEASE_TAG:-@RELEASE_TAG@}"
 VERSION="${VERSION:-3.5.1056}"
-LUCI_VERSION="${LUCI_VERSION:-1.1.0}"
+LUCI_VERSION="${LUCI_VERSION:-1.2.0}"
 BASE_URL="${BASE_URL:-https://github.com/$REPO/releases/download/$RELEASE_TAG}"
 TMP="/tmp/cloudpub-install.$$"
 trap 'rm -rf "$TMP"' EXIT INT TERM
@@ -41,4 +41,6 @@ else
 	opkg install "$TMP/cloudpub.ipk" "$TMP/luci-app-cloudpub.ipk"
 fi
 
+mkdir -p /etc/cloudpub
+printf '%s\n' "$RELEASE_TAG" > /etc/cloudpub/release-tag
 echo "CloudPub установлена: $RELEASE_TAG"

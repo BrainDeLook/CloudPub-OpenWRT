@@ -166,3 +166,24 @@ msgstr "Проект OpenWrt"
 
 msgid "Support"
 msgstr "Поддержка"
+
+msgid "Not checked"
+msgstr "Не проверялось"
+
+msgid "Check"
+msgstr "Проверить"
+
+msgid "Install update"
+msgstr "Установить обновление"
+
+msgid "New release available: "
+msgstr "Доступен новый релиз: "
+
+msgid "No new releases. Latest: "
+msgstr "Новых релизов нет. Последний: "
+
+msgid "Stable release"
+msgstr "Стабильный релиз"
+
+msgid "Beta release"
+msgstr "Beta-релиз"

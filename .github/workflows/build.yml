@@ -54,12 +54,14 @@ jobs:
       - name: Validate OpenWrt 25.12.5 aarch64 package set
         run: |
           test -s bin/cloudpub-3.5.1056-r1-aarch64_generic.apk
-          test -s bin/luci-app-cloudpub-1.1.0-r1.apk
+          test -s bin/luci-app-cloudpub-1.2.0-r1.apk
           docker run --rm -v "$PWD:/work:ro" -w /work alpine:edge sh -ec '
             apk manifest bin/cloudpub-3.5.1056-r1-aarch64_generic.apk >/dev/null
-            apk manifest bin/luci-app-cloudpub-1.1.0-r1.apk >/dev/null
+            apk manifest bin/luci-app-cloudpub-1.2.0-r1.apk >/dev/null
           sh -n cloudpub/files/cloudpub.init
           sh -n cloudpub/files/cloudpub-run
+          sh -n luci-app-cloudpub/root/usr/libexec/cloudpub-update-check
+          sh -n luci-app-cloudpub/root/usr/libexec/cloudpub-update
           sh -n bin/install.sh
           '
 

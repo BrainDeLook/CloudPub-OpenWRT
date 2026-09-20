@@ -33,16 +33,18 @@ function getPublicationList() {
 	);
 }
 
-function checkForUpdate() {
+function checkForUpdate(channel) {
 	return L.resolveDefault(
-		fs.exec_direct('/usr/libexec/cloudpub-update-check', []),
+		fs.exec_direct('/usr/libexec/cloudpub-update-check', [ channel ]),
 		''
 	).then(function(output) {
 		var parts = String(output || '').trim().split('\t');
 		return {
-			tag: parts[0] || '',
-			name: parts[1] || parts[0] || '',
-			prerelease: parts[2] === 'true'
+			status: parts[0] || '',
+			channel: parts[1] || channel,
+			tag: parts[2] || '',
+			name: parts[3] || parts[2] || '',
+			current: parts[4] || ''
 		};
 	});
 }
@@ -55,6 +57,41 @@ function renderStatus(isRunning) {
 	if (isRunning)
 		return '<em><span style="color:#2ea44f"><strong>' + _('Running') + '</strong></span></em>';
 	return '<em><span style="color:#d73a49"><strong>' + _('Not running') + '</strong></span></em>';
+}
+
+function renderPublications(container, output) {
+	var text = stripAnsi(output || '').trim();
+	while (container.firstChild)
+		container.removeChild(container.firstChild);
+
+	if (!text) {
+		container.appendChild(document.createTextNode(_('No data (service is not running or no publications are registered).')));
+		return;
+	}
+
+	text.split(/\r?\n/).forEach(function(line) {
+		var match = line.match(/^(\S+\s+[0-9a-f-]{36})\s+(?:\[([^\]]+)\]\s+)?(https?:\/\/\S+)\s+->\s+(https?:\/\/\S+)$/i);
+		var row = E('div', {});
+		if (!match) {
+			row.textContent = line;
+		} else {
+			row.appendChild(document.createTextNode(match[1] + ' '));
+			if (match[2]) {
+				row.appendChild(E('a', {
+					'href': match[4], 'target': '_blank', 'rel': 'noreferrer'
+				}, '[' + match[2] + ']'));
+				row.appendChild(document.createTextNode(' '));
+			}
+			row.appendChild(E('a', {
+				'href': match[3], 'target': '_blank', 'rel': 'noreferrer'
+			}, match[3]));
+			row.appendChild(document.createTextNode(' -> '));
+			row.appendChild(E('a', {
+				'href': match[4], 'target': '_blank', 'rel': 'noreferrer'
+			}, match[4]));
+		}
+		container.appendChild(row);
+	});
 }
 
 return view.extend({
@@ -153,50 +190,67 @@ return view.extend({
 		o.depends('proto', 'https');
 
 		return m.render().then(function(mapEl) {
-			var updateStatus = E('span', { 'id': 'cloudpub-update-status' }, _('Checking ...'));
-			var updateButton = E('button', {
-				'class': 'cbi-button cbi-button-action',
-				'type': 'button',
-				'disabled': 'disabled'
-			}, _('Check for updates'));
+			function makeUpdateRow(channel, title) {
+				var selectedTag = '';
+				var status = E('span', {}, _('Not checked'));
+				var checkButton = E('button', {
+					'class': 'cbi-button', 'type': 'button'
+				}, _('Check'));
+				var installButton = E('button', {
+					'class': 'cbi-button cbi-button-action', 'type': 'button',
+					'style': 'display:none; margin-left:.5em'
+				}, _('Install update'));
 
-			function refreshUpdateStatus() {
-				updateButton.disabled = true;
-				updateStatus.textContent = _('Checking ...');
-				return checkForUpdate().then(function(info) {
-					if (!info.tag) {
-						updateStatus.textContent = _('Update check failed');
+				checkButton.addEventListener('click', function() {
+					checkButton.disabled = true;
+					installButton.style.display = 'none';
+					status.textContent = _('Checking ...');
+					checkForUpdate(channel).then(function(info) {
+						selectedTag = info.tag;
+						if (!info.tag)
+							throw new Error(_('Update check failed'));
+						if (info.status === 'update') {
+							status.textContent = _('New release available: ') + info.tag;
+							installButton.textContent = _('Install ') + info.tag;
+							installButton.style.display = '';
+						} else {
+							status.textContent = _('No new releases. Latest: ') + info.tag;
+						}
+					}).catch(function() {
+						status.textContent = _('Update check failed');
+					}).then(function() {
+						checkButton.disabled = false;
+					});
+				});
+
+				installButton.addEventListener('click', function() {
+					if (!selectedTag)
 						return;
-					}
-					updateStatus.textContent = _('Latest release: ') + info.tag;
-					updateButton.textContent = _('Install ') + info.tag;
-					updateButton.disabled = false;
-				}).catch(function() {
-					updateStatus.textContent = _('Update check failed');
+					checkButton.disabled = true;
+					installButton.disabled = true;
+					status.textContent = _('Installing update ...');
+					fs.exec('/usr/libexec/cloudpub-update', [ selectedTag ]).then(function() {
+						installButton.style.display = 'none';
+						status.textContent = _('Update installed: reload LuCI if needed.');
+						ui.addNotification(null, E('p', _('CloudPub update installed.')), 'info');
+					}).catch(function(e) {
+						status.textContent = _('Update failed');
+						ui.addNotification(null, E('p', e.message || _('Update failed')), 'error');
+					}).then(function() {
+						checkButton.disabled = false;
+						installButton.disabled = false;
+					});
 				});
-			}
 
-			updateButton.addEventListener('click', function() {
-				updateButton.disabled = true;
-				updateStatus.textContent = _('Installing update ...');
-				checkForUpdate().then(function(info) {
-					if (!info.tag)
-						throw new Error(_('Update check failed'));
-					return fs.exec('/usr/libexec/cloudpub-update', [ info.tag ]);
-				}).then(function() {
-					ui.addNotification(null, E('p', _('CloudPub update installed.')), 'info');
-					updateStatus.textContent = _('Update installed: reload LuCI if needed.');
-				}).catch(function(e) {
-					updateStatus.textContent = _('Update failed');
-					ui.addNotification(null, E('p', e.message || _('Update failed')), 'error');
-				}).finally(function() {
-					updateButton.disabled = false;
-				});
-			});
+				return E('div', { 'style': 'display:flex; gap:.75em; align-items:center; flex-wrap:wrap; margin:.5em 0' }, [
+					E('strong', { 'style': 'min-width:10em' }, title), checkButton, status, installButton
+				]);
+			}
 
 			var updateSection = E('div', { 'class': 'cbi-section' }, [
 				E('h3', {}, _('Updates')),
-				E('p', {}, [ updateStatus, ' ', updateButton ])
+				makeUpdateRow('stable', _('Stable release')),
+				makeUpdateRow('beta', _('Beta release'))
 			]);
 			var linksSection = E('div', { 'class': 'cbi-section cloudpub-links' }, [
 				E('strong', {}, _('CloudPub links')),
@@ -218,11 +272,9 @@ return view.extend({
 
 					var ls = document.getElementById('cloudpub-ls');
 					if (ls)
-						ls.textContent = data[1] ? stripAnsi(data[1]).trim() : _('No data (service is not running or no publications are registered).');
+						renderPublications(ls, data[1]);
 				});
 			}, 10);
-			refreshUpdateStatus();
-			poll.add(refreshUpdateStatus, 600);
 
 			return E('div', {}, [
 				mapEl,

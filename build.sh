@@ -15,7 +15,7 @@ set -euo pipefail
 
 CLO_VERSION="${CLO_VERSION:-3.5.1056}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
-LUCI_VERSION="${LUCI_VERSION:-1.1.0}"
+LUCI_VERSION="${LUCI_VERSION:-1.2.0}"
 FORMATS="${FORMATS:-ipk apk}"
 DL_URL="https://cloudpub.ru/download/stable"
 MAINTAINER="CloudPub-OpenWRT"
