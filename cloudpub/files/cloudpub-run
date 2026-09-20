@@ -48,11 +48,57 @@ state_remove_guid() {
 	mv "$tmp" "$STATE_FILE"
 }
 
+state_guid_for_target() {
+	local proto="$1" target="$2"
+	[ -r "$STATE_FILE" ] || return 0
+	awk -F '\t' -v proto="$proto" -v target="$target" \
+		'$1 == proto && $2 == target { guid = $3 } END { print guid }' "$STATE_FILE"
+}
+
+registered_has_guid() {
+	local guid="$1"
+	[ -n "$guid" ] || return 1
+	printf '%s\n' "$REGISTERED" | grep -Eq "(^|[[:space:]])${guid}([[:space:]]|$)"
+}
+
+default_endpoint_for_target() {
+	local proto="$1" target="$2" port host path
+	case "$proto" in
+		http) port=80 ;;
+		https) port=443 ;;
+		*) return 0 ;;
+	esac
+	host="${target%%/*}"
+	case "$host" in
+		*:*) return 0 ;;
+	esac
+	path=
+	[ "$host" = "$target" ] || path="/${target#*/}"
+	printf '%s://%s:%s%s\n' "$proto" "$host" "$port" "$path"
+}
+
 registered_guid_for_target() {
-	local proto="$1" target="$2" line
-	# Match the same address representation returned by `clo ls` and used by
-	# the HA add-on. Keep the protocol in the match to avoid collisions.
-	line="$(printf '%s\n' "$REGISTERED" | grep -F "${proto}://${target}" | head -n1)"
+	local proto="$1" target="$2" guid endpoint default_endpoint line
+	# Prefer the persistent association. This is the only unambiguous mapping
+	# when multiple publications share a host but use different ports.
+	guid="$(state_guid_for_target "$proto" "$target")"
+	if registered_has_guid "$guid"; then
+		printf '%s\n' "$guid"
+		return 0
+	fi
+
+	# Fall back to an exact endpoint token. Never use substring matching here:
+	# http://192.168.1.1 must not match http://192.168.1.1:7070.
+	endpoint="${proto}://${target}"
+	default_endpoint="$(default_endpoint_for_target "$proto" "$target")"
+	line="$(printf '%s\n' "$REGISTERED" | awk -v endpoint="$endpoint" -v default_endpoint="$default_endpoint" '
+		{
+			for (i = 1; i <= NF; i++)
+				if ($i == endpoint || (default_endpoint != "" && $i == default_endpoint)) {
+					print
+					exit
+				}
+		}')"
 	extract_guid "$line"
 }
 
