@@ -108,6 +108,7 @@ set_client_options() {
 	# Do not write the default on every boot: this can rewrite client.toml and
 	# discard state that the client uses to reconnect existing publications.
 	[ "$unsafe_tls" -eq 1 ] && clo set unsafe_tls true >/dev/null 2>&1
+	return 0
 }
 
 reconcile() {
