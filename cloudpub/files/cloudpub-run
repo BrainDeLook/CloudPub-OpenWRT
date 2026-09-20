@@ -30,20 +30,9 @@ remember_guid() {
 
 registered_guid_for_target() {
 	local proto="$1" target="$2" line
-	line="$(printf '%s\n' "$REGISTERED" | awk -v prefix="$proto://" -v target="$target" '
-		index($0, prefix) {
-			start = index($0, prefix target)
-			if (!start && target ~ /^[0-9]+$/)
-				start = index($0, ":" target)
-			if (!start)
-				next
-			after = substr($0, start + length(target) + (substr($0, start, length(prefix)) == prefix ? length(prefix) : 1), 1)
-			if (after == "" || after !~ /[[:alnum:]_.-]/) {
-				print
-				exit
-			}
-		}
-	')"
+	# Match the same address representation returned by `clo ls` and used by
+	# the HA add-on. Keep the protocol in the match to avoid collisions.
+	line="$(printf '%s\n' "$REGISTERED" | grep -F "${proto}://${target}" | head -n1)"
 	extract_guid "$line"
 }
 
@@ -116,11 +105,9 @@ set_client_options() {
 		return 1
 	}
 	clo set token -- "$token" >/dev/null 2>&1 || return 1
-	if [ "$unsafe_tls" -eq 1 ]; then
-		clo set unsafe_tls true >/dev/null 2>&1
-	else
-		clo set unsafe_tls false >/dev/null 2>&1
-	fi
+	# Do not write the default on every boot: this can rewrite client.toml and
+	# discard state that the client uses to reconnect existing publications.
+	[ "$unsafe_tls" -eq 1 ] && clo set unsafe_tls true >/dev/null 2>&1
 }
 
 reconcile() {
