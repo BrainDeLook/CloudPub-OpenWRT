@@ -104,6 +104,12 @@ msgstr "Basic Auth"
 msgid "Form Auth"
 msgstr "Через форму"
 
+msgid "Form Auth is available only for HTTP, HTTPS, WebDAV and 1C."
+msgstr "Авторизация через форму доступна только для HTTP, HTTPS, WebDAV и 1C."
+
+msgid "The writer role is available only for WebDAV."
+msgstr "Роль writer доступна только для WebDAV."
+
 msgid "Access rules (ACL)"
 msgstr "Правила доступа (ACL)"
 

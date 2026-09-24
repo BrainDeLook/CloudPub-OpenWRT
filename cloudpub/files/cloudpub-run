@@ -105,14 +105,12 @@ registered_guid_for_target() {
 register_publication() {
 	local cfg="$1" enabled proto target name auth acl header a h guid output
 	config_get_bool enabled "$cfg" enabled 1
-	[ "$enabled" -eq 1 ] || return 0
 	config_get proto "$cfg" proto
 	config_get target "$cfg" target
 	if [ -z "$proto" ] || [ -z "$target" ]; then
 		log "skipping publication '$cfg': protocol or address is not set"
 		return 0
 	fi
-
 	guid="$(registered_guid_for_target "$proto" "$target")"
 	if [ -n "$guid" ]; then
 		remember_guid "$guid"
@@ -120,6 +118,10 @@ register_publication() {
 		log "publication already registered: $proto $target ($guid)"
 		return 0
 	fi
+	# An existing disabled publication still owns its GUID and domain. Only a
+	# deleted UCI section may reach remove_deleted_publications(). New disabled
+	# sections are not registered until first enabled.
+	[ "$enabled" -eq 1 ] || return 0
 
 	config_get name "$cfg" name
 	config_get auth "$cfg" auth
@@ -141,6 +143,50 @@ register_publication() {
 		log "failed to register publication: $proto $target: $output"
 		SYNC_OK=0
 	fi
+}
+
+apply_publication_state() {
+	local cfg="$1" enabled proto target guid line status
+	config_get proto "$cfg" proto
+	config_get target "$cfg" target
+	[ -n "$proto" ] && [ -n "$target" ] || return 0
+	guid="$(state_guid_for_target "$proto" "$target")"
+	[ -n "$guid" ] || return 0
+	line="$(printf '%s\n' "$REGISTERED" | awk -v guid="$guid" '$2 == guid { print; exit }')"
+	status="${line%% *}"
+	config_get_bool enabled "$cfg" enabled 1
+	if [ "$enabled" -eq 1 ]; then
+		[ "$status" = online ] && return 0
+		clo start "$guid" >/dev/null 2>&1
+	else
+		case " $STOP_SUCCEEDED " in
+			*" $guid "*) [ "$status" != online ] && return 0 ;;
+		esac
+		if clo stop "$guid" >/dev/null 2>&1; then
+			STOP_SUCCEEDED="$STOP_SUCCEEDED $guid"
+		fi
+	fi
+	# Verify the resulting status on the next poll; a successful CLI return
+	# alone does not prove that the connected agent has applied the change.
+	STATE_PENDING=1
+}
+
+apply_states() {
+	local agent_pid="$1" attempt
+	load_config
+	STOP_SUCCEEDED=
+	for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do
+		sleep 5
+		# The helper belongs to this exact clo process, not a later restart.
+		[ -r "/proc/$agent_pid/comm" ] || return 0
+		[ "$(cat "/proc/$agent_pid/comm")" = clo ] || return 0
+		REGISTERED="$(clo ls 2>/dev/null)" || continue
+		STATE_PENDING=0
+		config_foreach apply_publication_state publish
+		[ "$STATE_PENDING" -eq 0 ] && return 0
+	done
+	log "publication start/stop state could not be confirmed; retry by restarting CloudPub"
+	return 1
 }
 
 remove_deleted_publications() {
@@ -224,6 +270,11 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+if [ "${1:-}" = "--apply-states" ]; then
+	apply_states "$2"
+	exit $?
+fi
+
 load_config
 mkdir -p "$CONFDIR"
 chmod 0700 "$CONFDIR"
@@ -233,4 +284,8 @@ set_client_options || exit 1
 # short head start, then reconcile exactly once before the persistent agent.
 sleep 10
 reconcile || exit 1
+cleanup
+# stop/start need a running agent. Keep clo as the procd process and apply
+# per-publication state in a bounded helper after the agent connects.
+"$0" --apply-states "$$" &
 exec "$PROG" --conf "$CONF" --log-level "$LOG_LEVEL" -v run

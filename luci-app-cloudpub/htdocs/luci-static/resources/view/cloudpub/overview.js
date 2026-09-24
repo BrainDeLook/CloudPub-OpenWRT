@@ -189,6 +189,13 @@ return view.extend({
 		o.value('basic', _('Basic Auth'));
 		o.value('form', _('Form Auth'));
 		o.default = 'none';
+		o.validate = function(section_id, value) {
+			var field = this.map.lookupOption('proto', section_id);
+			var proto = field ? field[0].formvalue(field[1]) : (uci.get('cloudpub', section_id, 'proto') || 'http');
+			if (value === 'form' && [ 'http', 'https', 'webdav', '1c' ].indexOf(proto) < 0)
+				return _('Form Auth is available only for HTTP, HTTPS, WebDAV and 1C.');
+			return true;
+		};
 
 		o = s.option(form.DynamicList, 'acl', _('Access rules (ACL)'),
 			_('Access rules in the form email:role. Roles: admin, reader, writer.'));
@@ -196,6 +203,13 @@ return view.extend({
 		o.placeholder = 'user@example.com:reader';
 		o.depends('auth', 'basic');
 		o.depends('auth', 'form');
+		o.validate = function(section_id, value) {
+			var field = this.map.lookupOption('proto', section_id);
+			var proto = field ? field[0].formvalue(field[1]) : (uci.get('cloudpub', section_id, 'proto') || 'http');
+			if (typeof(value) === 'string' && /:writer$/.test(value) && proto !== 'webdav')
+				return _('The writer role is available only for WebDAV.');
+			return true;
+		};
 
 		o = s.option(form.DynamicList, 'header', _('Extra HTTP headers'),
 			_('Headers added to requests sent to the local server, in the form Name:Value.'));

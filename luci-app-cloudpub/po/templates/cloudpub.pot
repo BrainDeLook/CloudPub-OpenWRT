@@ -100,6 +100,12 @@ msgstr ""
 msgid "Form Auth"
 msgstr ""
 
+msgid "Form Auth is available only for HTTP, HTTPS, WebDAV and 1C."
+msgstr ""
+
+msgid "The writer role is available only for WebDAV."
+msgstr ""
+
 msgid "Access rules (ACL)"
 msgstr ""
 
