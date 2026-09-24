@@ -54,6 +54,7 @@ jobs:
       - name: Validate OpenWrt 25.12.5 aarch64 package set
         run: |
           node --check luci-app-cloudpub/htdocs/luci-static/resources/view/cloudpub/overview.js
+          node tests/luci-auth-create-only.cjs
           test -s bin/cloudpub-3.5.1056-r1-aarch64_generic.apk
           test -s bin/luci-app-cloudpub-1.4.0-r1.apk
           docker run --rm -v "$PWD:/work:ro" -w /work alpine:edge sh -ec '

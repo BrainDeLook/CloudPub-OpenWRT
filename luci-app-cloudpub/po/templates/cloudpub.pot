@@ -70,6 +70,9 @@ msgstr ""
 msgid "Local services that will be published to the Internet. After saving, the service is restarted and the publications are registered automatically."
 msgstr ""
 
+msgid "Authentication can be selected when adding a publication. To change it later, edit the publication in the CloudPub dashboard."
+msgstr ""
+
 msgid "Enabled"
 msgstr ""
 

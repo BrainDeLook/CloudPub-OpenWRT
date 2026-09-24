@@ -11,6 +11,7 @@ DESIRED_GUIDS="$test_dir/desired"
 CALLS="$test_dir/calls"
 guid=4494ad05-8771-4226-b544-0287037413b7
 TEST_ENABLED=0
+TEST_AUTH=none
 REGISTERED="online  $guid [OpenWRT] http://192.168.1.1:80 -> https://example.cloudpub.ru:443"
 printf 'http\t192.168.1.1\t%s\n' "$guid" > "$STATE_FILE"
 : > "$DESIRED_GUIDS"
@@ -20,6 +21,7 @@ config_get() {
 	case "$3" in
 		proto) eval "$1=http" ;;
 		target) eval "$1=192.168.1.1" ;;
+		auth) eval "$1=\$TEST_AUTH" ;;
 		*) eval "$1=" ;;
 	esac
 }
@@ -61,4 +63,11 @@ REGISTERED="stopped $guid [OpenWRT] http://192.168.1.1:80 -> https://example.clo
 : > "$DESIRED_GUIDS"
 remove_deleted_publications
 grep -Fqx "unpublish $guid" "$CALLS"
+
+# Authentication is passed when the service is first registered.
+REGISTERED=
+: > "$STATE_FILE"
+TEST_AUTH=basic
+register_publication section
+grep -Fqx 'register --auth basic http 192.168.1.1' "$CALLS"
 printf 'publication toggle regression tests passed\n'

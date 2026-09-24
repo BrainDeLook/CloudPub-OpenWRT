@@ -155,10 +155,18 @@ return view.extend({
 		};
 
 		s = m.section(form.GridSection, 'publish', _('Publications'),
-			_('Local services that will be published to the Internet. After saving, the service is restarted and the publications are registered automatically.'));
+			_('Local services that will be published to the Internet. After saving, the service is restarted and the publications are registered automatically.') + ' ' +
+			_('Authentication can be selected when adding a publication. To change it later, edit the publication in the CloudPub dashboard.'));
 		s.addremove = true;
 		s.anonymous = true;
 		s.nodescriptions = true;
+		s.addModalOptions = function(modalSection, section_id) {
+			if (this.map.addedSection === section_id)
+				return;
+			modalSection.children = modalSection.children.filter(function(option) {
+				return option.option !== 'auth' && option.option !== 'acl';
+			});
+		};
 
 		o = s.option(form.Flag, 'enabled', _('Enabled'));
 		o.default = '1';
@@ -189,6 +197,7 @@ return view.extend({
 		o.value('basic', _('Basic Auth'));
 		o.value('form', _('Form Auth'));
 		o.default = 'none';
+		o.modalonly = true;
 		o.validate = function(section_id, value) {
 			var field = this.map.lookupOption('proto', section_id);
 			var proto = field ? field[0].formvalue(field[1]) : (uci.get('cloudpub', section_id, 'proto') || 'http');
