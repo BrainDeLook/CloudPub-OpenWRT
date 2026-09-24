@@ -10,8 +10,8 @@ class Section {
 		this.type = type;
 		this.children = [];
 	}
-	option(type, name) {
-		const option = { option: name, value() {}, depends() {} };
+	option(type, name, title, description) {
+		const option = { option: name, description, value() {}, depends() {} };
 		this.children.push(option);
 		return option;
 	}
@@ -39,6 +39,8 @@ createView(view, form, {}, rpc, {}, {}, {}, () => {}, (value) => value, {}).rend
 const publications = map.sections.find((section) => section.type === 'publish');
 assert.ok(publications, 'publication section exists');
 assert.equal(publications.children.find((option) => option.option === 'auth').modalonly, true);
+assert.equal(publications.children.find((option) => option.option === 'auth').description,
+	'Authentication is set when creating a publication. Change it later in the CloudPub dashboard.');
 
 const fields = () => ({ children: publications.children.map((option) => ({ option: option.option })) });
 map.addedSection = 'new-publication';

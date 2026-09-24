@@ -155,8 +155,7 @@ return view.extend({
 		};
 
 		s = m.section(form.GridSection, 'publish', _('Publications'),
-			_('Local services that will be published to the Internet. After saving, the service is restarted and the publications are registered automatically.') + ' ' +
-			_('Authentication can be selected when adding a publication. To change it later, edit the publication in the CloudPub dashboard.'));
+			_('Local services that will be published to the Internet. After saving, the service is restarted and the publications are registered automatically.'));
 		s.addremove = true;
 		s.anonymous = true;
 		s.nodescriptions = true;
@@ -192,7 +191,8 @@ return view.extend({
 		o.rmempty = false;
 		o.placeholder = '192.168.1.10:8080';
 
-		o = s.option(form.ListValue, 'auth', _('Authentication'));
+		o = s.option(form.ListValue, 'auth', _('Authentication'),
+			_('Authentication is set when creating a publication. Change it later in the CloudPub dashboard.'));
 		o.value('none', _('None'));
 		o.value('basic', _('Basic Auth'));
 		o.value('form', _('Form Auth'));
