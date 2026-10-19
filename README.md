@@ -176,6 +176,16 @@ make package/cloudpub/compile package/luci-app-cloudpub/compile V=s
 - [История релизов](https://github.com/BrainDeLook/CloudPub-OpenWRT/releases)
 - [Исходный код клиента CloudPub](https://github.com/ermak-dev/cloudpub)
 
+## Лицензия
+
+Собственный код проекта распространяется под [Apache-2.0](LICENSE),
+кроме адаптированного скрипта `cloudpub/files/cloudpub-run`, который
+распространяется под [MPL-2.0](LICENSES/MPL-2.0.txt).
+Источники и условия сторонних компонентов перечислены в
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+В пакетах тексты лицензий и уведомления устанавливаются в
+`/usr/share/licenses/cloudpub/` и `/usr/share/licenses/luci-app-cloudpub/`.
+
 ## Уведомление
 
 Данное приложение для OpenWrt является неофициальным и не связано с CloudPub. CloudPub — это сервис, предоставляемый его разработчиками.

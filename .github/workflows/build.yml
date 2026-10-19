@@ -67,11 +67,14 @@ jobs:
         run: |
           node --check luci-app-cloudpub/htdocs/luci-static/resources/view/cloudpub/overview.js
           node tests/luci-auth-create-only.cjs
+          sh tests/package-licenses.sh "bin/cloudpub_${CLO_VERSION}-1_aarch64_generic.ipk" "bin/luci-app-cloudpub_${LUCI_VERSION}-1_all.ipk"
           test -s "bin/cloudpub-$CLO_VERSION-r1-aarch64_generic.apk"
           test -s "bin/luci-app-cloudpub-$LUCI_VERSION-r1.apk"
           docker run --rm -e CLO_VERSION -e LUCI_VERSION -v "$PWD:/work:ro" -w /work alpine:edge sh -ec '
             apk manifest "bin/cloudpub-$CLO_VERSION-r1-aarch64_generic.apk" >/dev/null
             apk manifest "bin/luci-app-cloudpub-$LUCI_VERSION-r1.apk" >/dev/null
+            apk manifest "bin/cloudpub-$CLO_VERSION-r1-aarch64_generic.apk" | grep -F "usr/share/licenses/cloudpub/MPL-2.0.txt"
+            apk manifest "bin/luci-app-cloudpub-$LUCI_VERSION-r1.apk" | grep -F "usr/share/licenses/luci-app-cloudpub/LICENSE"
           sh -n cloudpub/files/cloudpub.init
           sh -n cloudpub/files/cloudpub-run
           sh tests/cloudpub-publication-toggle.sh

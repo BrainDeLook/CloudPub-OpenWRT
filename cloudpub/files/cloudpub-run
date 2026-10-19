@@ -1,4 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# Adapted from black-roland/hassio-addon-cloudpub; see THIRD_PARTY_NOTICES.md.
+# OpenWrt adaptation and modifications: BrainDeLook and contributors.
 # CloudPub publication reconciler for OpenWrt.
 # This follows the Home Assistant add-on: client.toml is persistent, while
 # clo ls is the source of truth for registered publication GUIDs.

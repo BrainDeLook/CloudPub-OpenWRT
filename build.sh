@@ -76,6 +76,8 @@ pack_ipk() {
 
 pack_apk() {
 	local stage="$1" out="$2" name="$3" version="$4" arch="$5" description="$6" depends="${7:-}"
+	local license=Apache-2.0
+	[ "$name" != cloudpub ] || license='Apache-2.0 AND MPL-2.0'
 	command -v apk >/dev/null 2>&1 || {
 		warn "apk-tools is required for .apk output (set FORMATS=ipk to skip)"
 		return 1
@@ -83,7 +85,7 @@ pack_apk() {
 	set -- apk mkpkg \
 		--info "name:$name" --info "version:$version-r$PKG_RELEASE" \
 		--info "description:$description" --info "arch:$arch" \
-		--info "license:Apache-2.0" --info "origin:CloudPub-OpenWRT" \
+		--info "license:$license" --info "origin:CloudPub-OpenWRT" \
 		--info "url:https://github.com/BrainDeLook/CloudPub-OpenWRT" \
 		--info "maintainer:$MAINTAINER"
 	[ -z "$depends" ] || set -- "$@" --info "depends:$depends"
@@ -115,6 +117,17 @@ extract_clo() {
 	echo "$bin"
 }
 
+install_license_documents() {
+	local data="$1" package="$2" dir
+	dir="$data/usr/share/licenses/$package"
+	mkdir -p "$dir"
+	install -m 0644 "$ROOT/LICENSE" "$dir/LICENSE"
+	install -m 0644 "$ROOT/THIRD_PARTY_NOTICES.md" "$dir/THIRD_PARTY_NOTICES.md"
+	if [ "$package" = cloudpub ]; then
+		install -m 0644 "$ROOT/LICENSES/MPL-2.0.txt" "$dir/MPL-2.0.txt"
+	fi
+}
+
 prepare_cloudpub() {
 	local owrt_arch="$1" clo_bin="$2"
 	local stage="$WORK/cloudpub-$owrt_arch"
@@ -126,6 +139,7 @@ prepare_cloudpub() {
 	install -m 0755 "$ROOT/cloudpub/files/cloudpub.init" "$data/etc/init.d/cloudpub"
 	install -m 0755 "$ROOT/cloudpub/files/cloudpub-run" "$data/usr/libexec/cloudpub-run"
 	install -m 0644 "$ROOT/cloudpub/files/cloudpub.config" "$data/etc/config/cloudpub"
+	install_license_documents "$data" cloudpub
 
 	local size
 	size="$(du -sk "$data" | cut -f1)"
@@ -135,6 +149,7 @@ prepare_cloudpub() {
 		Version: $CLO_VERSION-$PKG_RELEASE
 		Architecture: $owrt_arch
 		Maintainer: $MAINTAINER
+		License: Apache-2.0 AND MPL-2.0
 		Section: net
 		Priority: optional
 		Installed-Size: $((size * 1024))
@@ -189,6 +204,7 @@ prepare_luci() {
 	mkdir -p "$data/www" "$control"
 	cp -a "$app/htdocs/." "$data/www/"
 	cp -a "$app/root/." "$data/"
+	install_license_documents "$data" luci-app-cloudpub
 	chmod 0755 "$data/usr/libexec/cloudpub-update-check" "$data/usr/libexec/cloudpub-update" "$data/usr/libexec/cloudpub-update-monitor" "$data/etc/init.d/cloudpub-update-check"
 
 	# Compile the Russian translation when po2lmo is available
@@ -208,6 +224,7 @@ prepare_luci() {
 		Version: $LUCI_VERSION-$PKG_RELEASE
 		Architecture: all
 		Maintainer: $MAINTAINER
+		License: Apache-2.0
 		Section: luci
 		Priority: optional
 		Depends: cloudpub, luci-base

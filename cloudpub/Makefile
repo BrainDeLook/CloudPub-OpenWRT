@@ -33,7 +33,8 @@ PKG_SOURCE_URL:=https://cloudpub.ru/download/stable
 PKG_HASH:=skip
 
 PKG_MAINTAINER:=CloudPub-OpenWRT
-PKG_LICENSE:=Apache-2.0
+PKG_LICENSE:=Apache-2.0 AND MPL-2.0
+PKG_LICENSE_FILES:=LICENSE MPL-2.0.txt
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -61,6 +62,9 @@ endef
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(TAR) -xzf $(DL_DIR)/$(PKG_SOURCE) -C $(PKG_BUILD_DIR)
+	$(INSTALL_DATA) ../LICENSE $(PKG_BUILD_DIR)/LICENSE
+	$(INSTALL_DATA) ../LICENSES/MPL-2.0.txt $(PKG_BUILD_DIR)/MPL-2.0.txt
+	$(INSTALL_DATA) ../THIRD_PARTY_NOTICES.md $(PKG_BUILD_DIR)/THIRD_PARTY_NOTICES.md
 endef
 
 define Build/Configure
@@ -78,6 +82,10 @@ define Package/cloudpub/install
 	$(INSTALL_BIN) ./files/cloudpub-run $(1)/usr/libexec/cloudpub-run
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/cloudpub.config $(1)/etc/config/cloudpub
+	$(INSTALL_DIR) $(1)/usr/share/licenses/cloudpub
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/LICENSE $(1)/usr/share/licenses/cloudpub/LICENSE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/MPL-2.0.txt $(1)/usr/share/licenses/cloudpub/MPL-2.0.txt
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/THIRD_PARTY_NOTICES.md $(1)/usr/share/licenses/cloudpub/THIRD_PARTY_NOTICES.md
 endef
 
 $(eval $(call BuildPackage,cloudpub))
