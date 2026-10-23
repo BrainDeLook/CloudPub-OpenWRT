@@ -101,13 +101,13 @@ jobs:
           timeout 30 sh tests/cloudpub-client-upgrade.sh "$client_dir/previous/clo" "$client"
           tar -xzf "dl/clo-$CLO_VERSION-stable-linux-aarch64.tar.gz" -C "$client_dir"
           file "$client_dir/clo" | grep 'ARM aarch64.*statically linked'
-          curl -fL --retry 3 -o dl/clo-3.6.902-stable-linux-aarch64.tar.gz https://cloudpub.ru/download/stable/clo-3.6.902-stable-linux-aarch64.tar.gz
-          timeout 60 docker run --rm --platform linux/arm64 -e CLO_VERSION -v "$PWD:/work:ro" -w /work alpine:edge sh -ec '
+          curl -fL --retry 3 -o "$client_dir/previous-aarch64.tar.gz" https://cloudpub.ru/download/stable/clo-3.6.902-stable-linux-aarch64.tar.gz
+          timeout 60 docker run --rm --platform linux/arm64 -e CLO_VERSION -v "$PWD:/work:ro" -v "$client_dir/previous-aarch64.tar.gz:/previous-aarch64.tar.gz:ro" -w /work alpine:edge sh -ec '
             mkdir /tmp/cloudpub-client
             tar -xzf "dl/clo-$CLO_VERSION-stable-linux-aarch64.tar.gz" -C /tmp/cloudpub-client
             sh tests/cloudpub-client-compatibility.sh /tmp/cloudpub-client/clo "$CLO_VERSION"
             mkdir /tmp/cloudpub-previous
-            tar -xzf /work/dl/clo-3.6.902-stable-linux-aarch64.tar.gz -C /tmp/cloudpub-previous
+            tar -xzf /previous-aarch64.tar.gz -C /tmp/cloudpub-previous
             sh tests/cloudpub-client-upgrade.sh /tmp/cloudpub-previous/clo /tmp/cloudpub-client/clo
           '
 
