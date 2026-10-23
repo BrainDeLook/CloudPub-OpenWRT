@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=cloudpub
-PKG_VERSION:=3.6.902
+PKG_VERSION:=3.7.937
 PKG_RELEASE:=1
 
 CLO_ARCH:=

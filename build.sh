@@ -6,14 +6,14 @@
 #
 # Usage:
 #   ./build.sh                 build for all architectures from the list below
-#   CLO_VERSION=3.6.902 ./build.sh
+#   CLO_VERSION=3.7.937 ./build.sh
 #   ARCHS="mipsel_24kc:mipsel" ./build.sh   build only the given pairs
 #
 # Output: bin/*.ipk
 #
 set -euo pipefail
 
-CLO_VERSION="${CLO_VERSION:-3.6.902}"
+CLO_VERSION="${CLO_VERSION:-3.7.937}"
 RELEASE_VERSION="${RELEASE_VERSION:-v${CLO_VERSION}}"
 PKG_RELEASE="${PKG_RELEASE:-1}"
 LUCI_VERSION="${LUCI_VERSION:-1.5.0}"
